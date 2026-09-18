@@ -889,6 +889,21 @@
     text-align: center;
 }
 
+
+/* ===== Carrying systems ===== */
+.carry-title { margin:14px 0 8px; font-size:12px; color:#aebdca; font-weight:800; }
+#carrySystems { display:grid; gap:8px; margin-bottom:14px; }
+.carry-system {
+    width:100%; display:flex; align-items:center; gap:11px; text-align:left;
+    border:1px solid rgba(255,255,255,.12); border-radius:12px;
+    padding:10px; color:#fff; background:rgba(255,255,255,.06); cursor:pointer;
+}
+.carry-system.active { border-color:rgba(72,223,121,.65); background:rgba(72,223,121,.13); }
+.carry-system .carry-icon { font-size:27px; }
+.carry-system span:nth-child(2) { flex:1; display:flex; flex-direction:column; }
+.carry-system small { color:#aebdca; margin-top:3px; font-size:10px; }
+.carry-system strong { font-size:9px; color:#79e69b; }
+
 </style>
 </head>
 
@@ -1044,6 +1059,10 @@
                 <h2>🎒 Рюкзак</h2>
             </div>
             <div id="inventorySummary" class="inventory-summary"></div>
+
+            <div class="carry-title">Спосіб перенесення</div>
+            <div id="carrySystems"></div>
+
             <div class="capacity-label"><span>Вага</span><span id="weightText"></span></div>
             <div class="capacity-bar"><div id="weightFill" class="capacity-fill"></div></div>
             <div class="capacity-label"><span>Об'єм</span><span id="volumeText"></span></div>
@@ -1134,6 +1153,109 @@
 ========================================================= */
 const MAX_INVENTORY_WEIGHT = 35.0;
 const MAX_INVENTORY_VOLUME = 80.0;
+
+/* =========================================================
+   CARRYING SYSTEMS — backpack / bicycle / cart / car
+========================================================= */
+const CARRY_SYSTEM_STORAGE_KEY = "geoGameCarrySystemsV1";
+const DEFAULT_CARRY_SYSTEM_ID = "backpack";
+
+const CARRY_SYSTEMS = {
+    backpack: {
+        id: "backpack", name: "Рюкзак", icon: "🎒",
+        maxWeight: 35.0, maxVolume: 80.0
+    },
+    bicycle: {
+        id: "bicycle", name: "Велосипед", icon: "🚲",
+        maxWeight: 60.0, maxVolume: 120.0
+    },
+    cart: {
+        id: "cart", name: "Тачка", icon: "🛒",
+        maxWeight: 100.0, maxVolume: 180.0
+    },
+    car: {
+        id: "car", name: "Машина", icon: "🚗",
+        maxWeight: 300.0, maxVolume: 500.0
+    }
+};
+
+let carryState = loadCarryState();
+
+function loadCarryState() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(CARRY_SYSTEM_STORAGE_KEY) || "{}");
+        const owned = Array.isArray(saved.owned) ? saved.owned.filter(id => CARRY_SYSTEMS[id]) : [];
+        if (!owned.includes("backpack")) owned.unshift("backpack");
+        const active = owned.includes(saved.active) ? saved.active : "backpack";
+        return { owned, active };
+    } catch (_) {
+        return { owned:["backpack"], active:"backpack" };
+    }
+}
+
+function saveCarryState() {
+    localStorage.setItem(CARRY_SYSTEM_STORAGE_KEY, JSON.stringify(carryState));
+}
+
+function getActiveCarrySystem() {
+    return CARRY_SYSTEMS[carryState.active] || CARRY_SYSTEMS.backpack;
+}
+
+function ownCarrySystem(id) {
+    if (!CARRY_SYSTEMS[id]) return false;
+    if (!carryState.owned.includes(id)) carryState.owned.push(id);
+    carryState.active = id;
+    saveCarryState();
+    updateInventoryUI();
+    renderCarrySystems();
+    return true;
+}
+
+function activateCarrySystem(id) {
+    if (!carryState.owned.includes(id) || !CARRY_SYSTEMS[id]) return;
+    const target = CARRY_SYSTEMS[id];
+    const weight = getInventoryWeight();
+    const volume = getInventoryVolume();
+
+    if (weight > target.maxWeight || volume > target.maxVolume) {
+        showGameMessage(
+            `Забагато вантажу для "${target.name}". Спочатку звільніть місце.`,
+            "error"
+        );
+        return;
+    }
+
+    carryState.active = id;
+    saveCarryState();
+    updateInventoryUI();
+    renderCarrySystems();
+}
+
+function renderCarrySystems() {
+    const box = document.getElementById("carrySystems");
+    if (!box) return;
+    box.innerHTML = "";
+
+    carryState.owned.forEach(id => {
+        const system = CARRY_SYSTEMS[id];
+        if (!system) return;
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "carry-system" + (carryState.active === id ? " active" : "");
+        btn.innerHTML = `
+            <span class="carry-icon">${system.icon}</span>
+            <span>
+                <b>${system.name}</b>
+                <small>${system.maxWeight.toFixed(0)} кг · ${system.maxVolume.toFixed(0)} л</small>
+            </span>
+            ${carryState.active === id ? '<strong>АКТИВНО</strong>' : ''}
+        `;
+        btn.addEventListener("click", () => activateCarrySystem(id));
+        box.appendChild(btn);
+    });
+}
+
 const INVENTORY_STORAGE_KEY = "geoGameInventory";
 
 const STARTER_AXE = {
@@ -1170,6 +1292,92 @@ const BUILDING_LOOT_TABLE = [
     }
 ];
 
+
+/* ===== Loot by OSM building type ===== */
+const PARACETAMOL_ITEM = {
+    id: "paracetamol",
+    name: "Парацетамол",
+    icon: "💊",
+    weight: 0.1,
+    volume: 0.1,
+    external: false
+};
+
+const VEHICLE_ITEM = {
+    id: "carry_car", name: "Машина", icon: "🚗",
+    carrySystemId: "car", specialCarrySystem: true
+};
+
+
+const BICYCLE_ITEM = {
+    id: "carry_bicycle", name: "Велосипед", icon: "🚲",
+    carrySystemId: "bicycle", specialCarrySystem: true
+};
+
+const CART_ITEM = {
+    id: "carry_cart", name: "Тачка", icon: "🛒",
+    carrySystemId: "cart", specialCarrySystem: true
+};
+
+const FUEL_ITEM = {
+    id: "fuel",
+    name: "Пальне",
+    icon: "⛽",
+    weight: 5.0,
+    volume: 5.0,
+    external: false
+};
+
+function generateLootForBuilding(record) {
+    const info = getBuildingDisplayInfo(record);
+
+    // Medical: 50% chance for paracetamol.
+    if (info.type === "medical") {
+        return Math.random() < 0.50
+            ? [{ ...PARACETAMOL_ITEM, quantity: 1 }]
+            : [];
+    }
+
+    // Grocery/shop: 50% chance to find ONE random food resource.
+    if (info.type === "shop") {
+        if (Math.random() >= 0.50) return [];
+        const template =
+            BUILDING_LOOT_TABLE[
+                Math.floor(Math.random() * BUILDING_LOOT_TABLE.length)
+            ];
+        return [{ ...template, quantity: 1 }];
+    }
+
+
+    // Shopping center / hypermarket: guaranteed bicycle or cart.
+    if (info.type === "mall") {
+        const template = Math.random() < 0.50 ? BICYCLE_ITEM : CART_ITEM;
+        return [{ ...template, quantity: 1 }];
+    }
+
+    // Service station: guaranteed vehicle.
+    if (info.type === "service") {
+        return [{ ...VEHICLE_ITEM, quantity: 1 }];
+    }
+
+    // Fuel station: guaranteed fuel.
+    if (info.type === "fuel") {
+        return [{ ...FUEL_ITEM, quantity: 1 }];
+    }
+
+    // Ordinary buildings keep the previous generic 50% water/food rule.
+    if (Math.random() < BUILDING_LOOT_CHANCE) {
+        const template =
+            BUILDING_LOOT_TABLE[
+                Math.floor(Math.random() * BUILDING_LOOT_TABLE.length)
+            ];
+        return [{ ...template, quantity: 1 }];
+    }
+
+    return [];
+}
+
+
 let inventory = [];
 
 function loadInventory() {
@@ -1198,8 +1406,9 @@ function getInventoryVolume() {
 function canAddItem(weight, volume) {
     const w = Number(weight), v = Number(volume);
     if (!Number.isFinite(w) || !Number.isFinite(v) || w < 0 || v < 0) return false;
-    return getInventoryWeight() + w <= MAX_INVENTORY_WEIGHT &&
-           getInventoryVolume() + v <= MAX_INVENTORY_VOLUME;
+    const system = getActiveCarrySystem();
+    return getInventoryWeight() + w <= system.maxWeight &&
+           getInventoryVolume() + v <= system.maxVolume;
 }
 
 function addItem(item) {
@@ -1272,14 +1481,15 @@ function renderBackpackGrid() {
 function updateInventoryUI() {
     const weight = getInventoryWeight();
     const volume = getInventoryVolume();
-    const status = `Рюкзак: ${weight.toFixed(1)} / ${MAX_INVENTORY_WEIGHT.toFixed(1)} кг (${formatLiters(volume)} / ${formatLiters(MAX_INVENTORY_VOLUME)} л)`;
+    const system = getActiveCarrySystem();
+    const status = `${system.icon} ${system.name}: ${weight.toFixed(1)} / ${system.maxWeight.toFixed(1)} кг (${formatLiters(volume)} / ${formatLiters(system.maxVolume)} л)`;
     const inventoryStatusEl = document.getElementById("inventoryStatus");
     if (inventoryStatusEl) inventoryStatusEl.textContent = status;
     document.getElementById("inventorySummary").textContent = status;
-    document.getElementById("weightText").textContent = `${weight.toFixed(1)} / ${MAX_INVENTORY_WEIGHT.toFixed(1)} кг`;
-    document.getElementById("volumeText").textContent = `${formatLiters(volume)} / ${formatLiters(MAX_INVENTORY_VOLUME)} л`;
-    document.getElementById("weightFill").style.width = `${Math.min(100, weight / MAX_INVENTORY_WEIGHT * 100)}%`;
-    document.getElementById("volumeFill").style.width = `${Math.min(100, volume / MAX_INVENTORY_VOLUME * 100)}%`;
+    document.getElementById("weightText").textContent = `${weight.toFixed(1)} / ${system.maxWeight.toFixed(1)} кг`;
+    document.getElementById("volumeText").textContent = `${formatLiters(volume)} / ${formatLiters(system.maxVolume)} л`;
+    document.getElementById("weightFill").style.width = `${Math.min(100, weight / system.maxWeight * 100)}%`;
+    document.getElementById("volumeFill").style.width = `${Math.min(100, volume / system.maxVolume * 100)}%`;
     const list = document.getElementById("inventoryItems");
     list.innerHTML = "";
     inventory.forEach(item => {
@@ -1293,6 +1503,7 @@ function updateInventoryUI() {
     });
 
     renderBackpackGrid();
+    renderCarrySystems();
 }
 
 document.getElementById("inventoryButton").addEventListener("click", () => {
@@ -1534,7 +1745,8 @@ function renderBaseStorage() {
     const weight = getBaseStorageWeight();
     document.getElementById("storageWeightText").textContent = `Сховище: ${weight.toFixed(1)} / ${BASE_STORAGE_MAX_WEIGHT.toFixed(1)} кг`;
     document.getElementById("storageWeightFill").style.width = `${Math.min(100, weight / BASE_STORAGE_MAX_WEIGHT * 100)}%`;
-    document.getElementById("storageBackpackSummary").textContent = `Рюкзак: ${getInventoryWeight().toFixed(1)} / ${MAX_INVENTORY_WEIGHT.toFixed(1)} кг (${formatLiters(getInventoryVolume())} / ${formatLiters(MAX_INVENTORY_VOLUME)} л)`;
+    const activeCarry = getActiveCarrySystem();
+    document.getElementById("storageBackpackSummary").textContent = `${activeCarry.icon} ${activeCarry.name}: ${getInventoryWeight().toFixed(1)} / ${activeCarry.maxWeight.toFixed(1)} кг (${formatLiters(getInventoryVolume())} / ${formatLiters(activeCarry.maxVolume)} л)`;
 
     const grid = document.getElementById("storageGrid");
     grid.innerHTML = "";
@@ -2654,6 +2866,14 @@ function classifyBuilding(tags = {}, poi = null) {
         name.includes("сто") || name.includes("автосерв") || name.includes("шиномонтаж")
     ) return { type:"service", icon:"🔧", label:"СТО / автосервіс" };
 
+
+    if (
+        shop === "mall" || shop === "department_store" ||
+        building === "retail" ||
+        name.includes("ашан") || name.includes("auchan") ||
+        name.includes("епіцентр") || name.includes("epicentr")
+    ) return { type:"mall", icon:"🏬", label:"ТРЦ / гіпермаркет" };
+
     if (
         shop === "supermarket" || shop === "convenience" || shop === "grocery" ||
         shop === "general" || shop === "department_store" || shop === "mall" ||
@@ -2802,15 +3022,7 @@ function searchBuilding(record) {
     */
     if (!state.lootGenerated) {
         state.lootGenerated = true;
-        state.loot = [];
-
-        if (Math.random() < BUILDING_LOOT_CHANCE) {
-            const template =
-                BUILDING_LOOT_TABLE[
-                    Math.floor(Math.random() * BUILDING_LOOT_TABLE.length)
-                ];
-            state.loot.push({ ...template, quantity: 1 });
-        }
+        state.loot = generateLootForBuilding(record);
 
         buildingStates[record.id] = state;
         saveBuildingStates();
@@ -2926,6 +3138,18 @@ function takeOneBuildingLoot(index) {
     const state = getBuildingLootState(activeLootBuilding);
     const item = state.loot[index];
     if (!item) return;
+
+    if (item.specialCarrySystem && item.carrySystemId) {
+        ownCarrySystem(item.carrySystemId);
+        state.loot.splice(index, 1);
+        if (!state.loot.length) state.isDepleted = true;
+        buildingStates[activeBuildingLootRecord.id] = state;
+        saveBuildingStates();
+        renderBuildingLootModal();
+        refreshBuildingStyle(activeBuildingLootRecord);
+        showGameMessage(`${item.icon} ${item.name} тепер доступна замість рюкзака`, "success");
+        return;
+    }
 
     if (!canAddItem(item.weight, item.volume)) {
         setBuildingLootMessage(
