@@ -1146,6 +1146,15 @@
     filter:grayscale(1);
 }
 
+
+/* Emergency car unload must exist only after an actually owned car runs out of fuel. */
+#emergencyUnloadModal {
+    display: none !important;
+}
+#emergencyUnloadModal.show {
+    display: flex !important;
+}
+
 </style>
 </head>
 
@@ -1605,6 +1614,8 @@ function createStrandedCarMarker() {
 }
 
 function strandCarAt(lat, lng) {
+    if (!carryState.owned.includes("car") || carryState.active !== "car") return;
+
     if (strandedCar) return;
 
     strandedCar = {
@@ -1637,6 +1648,8 @@ function distanceToStrandedCar() {
 }
 
 function openStrandedCar() {
+    if (!carryState.owned.includes("car") || !strandedCar) return;
+
     if (!strandedCar) return;
     const d = distanceToStrandedCar();
     if (d > STRANDED_CAR_INTERACTION_RADIUS) {
@@ -6237,6 +6250,28 @@ function scheduleSpecialBuildingMarkerRefresh() {
 setTimeout(() => {
     try { refreshSpecialBuildingMarkers(); } catch (_) {}
 }, 1800);
+
+
+
+function validateStrandedCarOwnership() {
+    const ownsCar = !!(carryState && Array.isArray(carryState.owned) && carryState.owned.includes("car"));
+    if (!ownsCar) {
+        strandedCar = null;
+        try { localStorage.removeItem(STRANDED_CAR_STORAGE_KEY); } catch (_) {}
+        const modal = document.getElementById("emergencyUnloadModal");
+        if (modal) modal.classList.remove("show");
+        if (strandedCarMarker && typeof map !== "undefined" && map) {
+            try { map.removeLayer(strandedCarMarker); } catch (_) {}
+            strandedCarMarker = null;
+        }
+    }
+}
+
+
+
+setTimeout(() => {
+    try { validateStrandedCarOwnership(); } catch (_) {}
+}, 0);
 
 </script>
 
