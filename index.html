@@ -590,6 +590,48 @@
         .building-popup-warning { margin-top:9px; color:#ff6868; font-size:12px; font-weight:800; line-height:1.35; }
         .building-popup-ok { color:#76dc98; font-size:12px; margin-top:8px; }
 
+    
+
+        /* BASE STORAGE MODAL */
+        #baseStorageModal {
+            position: fixed; inset: 0; z-index: 5000;
+            background: rgba(4,8,12,.92); backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px); padding: 18px;
+            overflow-y: auto;
+        }
+        .storage-shell { width:min(920px,100%); min-height:calc(100vh - 36px); margin:0 auto; display:flex; flex-direction:column; gap:16px; }
+        .storage-top { background:rgba(15,24,32,.96); border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:18px; box-shadow:0 12px 35px rgba(0,0,0,.35); }
+        .storage-header { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+        .storage-header h2 { margin:0; font-size:22px; }
+        .storage-level { color:#aebdca; font-size:13px; margin-top:4px; }
+        #storageWeightText { margin-top:14px; font-weight:900; font-size:16px; }
+        .storage-weight-bar { height:10px; margin-top:8px; border-radius:999px; background:rgba(255,255,255,.10); overflow:hidden; }
+        #storageWeightFill { height:100%; width:0%; background:#68d391; transition:width .2s ease; }
+        #storageWarning { margin-top:10px; color:#ff6b6b; font-size:13px; font-weight:800; min-height:18px; }
+        .storage-body { display:grid; grid-template-columns:minmax(0,1fr) minmax(260px,.62fr); gap:16px; flex:1; }
+        .storage-panel { background:rgba(15,24,32,.96); border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:16px; }
+        .storage-panel h3 { margin:0 0 12px; font-size:16px; }
+        #storageGrid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:9px; }
+        .storage-cell { aspect-ratio:1/1; min-width:0; border-radius:12px; border:1px solid rgba(255,255,255,.13); background:rgba(255,255,255,.055); display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; padding:5px; color:#fff; cursor:pointer; }
+        .storage-cell.empty { cursor:default; background:rgba(150,160,170,.07); border-style:dashed; }
+        .storage-cell .item-icon { font-size:25px; line-height:1; }
+        .storage-cell .item-name { font-size:9px; text-align:center; margin-top:5px; line-height:1.1; overflow:hidden; max-width:100%; }
+        .storage-cell .item-count { position:absolute; right:5px; bottom:4px; font-size:11px; font-weight:900; background:rgba(0,0,0,.68); padding:2px 5px; border-radius:7px; }
+        #storageBackpackList { display:grid; gap:8px; }
+        .storage-backpack-item { width:100%; display:flex; align-items:center; gap:10px; text-align:left; padding:10px; border-radius:11px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.07); color:#fff; cursor:pointer; }
+        .storage-backpack-item:active { transform:scale(.98); }
+        .storage-backpack-item .bp-icon { font-size:24px; }
+        .storage-backpack-item .bp-name { font-weight:800; font-size:13px; }
+        .storage-backpack-item .bp-stats { color:#b8c5d0; font-size:11px; margin-top:2px; }
+        .storage-empty-text { color:#91a0ad; font-size:13px; }
+        #closeBaseStorage { border:0; border-radius:12px; padding:11px 15px; font-weight:900; cursor:pointer; }
+        @media (max-width:720px) {
+            #baseStorageModal { padding:10px; }
+            .storage-shell { min-height:calc(100vh - 20px); }
+            .storage-body { grid-template-columns:1fr; }
+            #storageGrid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+        }
+
     </style>
 </head>
 
@@ -741,6 +783,36 @@
         </div>
     </div>
 
+
+    <!-- BASE STORAGE MODAL -->
+    <div id="baseStorageModal" class="hidden">
+        <div class="storage-shell">
+            <div class="storage-top">
+                <div class="storage-header">
+                    <div>
+                        <h2>📦 Склад Бази</h2>
+                        <div class="storage-level">🏠 Головна База · Рівень 1</div>
+                    </div>
+                    <button id="closeBaseStorage">Закрити</button>
+                </div>
+                <div id="storageWeightText">Сховище: 0.0 / 50.0 кг</div>
+                <div class="storage-weight-bar"><div id="storageWeightFill"></div></div>
+                <div id="storageWarning"></div>
+            </div>
+            <div class="storage-body">
+                <div class="storage-panel">
+                    <h3>Сховище · 24 комірки</h3>
+                    <div id="storageGrid"></div>
+                </div>
+                <div class="storage-panel">
+                    <h3>🎒 Мій рюкзак</h3>
+                    <div id="storageBackpackSummary" class="inventory-summary"></div>
+                    <div id="storageBackpackList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- GAME MESSAGE -->
     <div id="gameMessage" class="hidden"></div>
 
@@ -882,6 +954,135 @@ document.getElementById("closeInventory").addEventListener("click", () => {
 document.getElementById("inventoryModal").addEventListener("click", e => {
     if (e.target.id === "inventoryModal") e.currentTarget.classList.add("hidden");
 });
+
+
+/* =========================================================
+   BASE STORAGE INVENTORY
+========================================================= */
+const BASE_STORAGE_KEY = "geoGameBaseStorage";
+const BASE_STORAGE_MAX_WEIGHT = 50.0;
+const BASE_STORAGE_SLOTS = 24;
+let baseStorage = [];
+
+function loadBaseStorage() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(BASE_STORAGE_KEY) || "[]");
+        baseStorage = Array.isArray(saved) ? saved.filter(stack => stack && stack.id && Number(stack.quantity) > 0) : [];
+    } catch (_) { baseStorage = []; }
+}
+
+function saveBaseStorage() {
+    localStorage.setItem(BASE_STORAGE_KEY, JSON.stringify(baseStorage));
+}
+
+function getBaseStorageWeight() {
+    return baseStorage.reduce((sum, stack) => sum + Number(stack.weight || 0) * Number(stack.quantity || 0), 0);
+}
+
+function setStorageWarning(message = "") {
+    const el = document.getElementById("storageWarning");
+    if (el) el.textContent = message;
+}
+
+function moveInventoryItemToStorage(index) {
+    const item = inventory[index];
+    if (!item) return;
+    if (getBaseStorageWeight() + Number(item.weight || 0) > BASE_STORAGE_MAX_WEIGHT) {
+        setStorageWarning("Склад Бази заповнений!");
+        return;
+    }
+    let stack = baseStorage.find(s => s.id === item.id);
+    if (!stack) {
+        if (baseStorage.length >= BASE_STORAGE_SLOTS) {
+            setStorageWarning("Склад Бази заповнений!");
+            return;
+        }
+        stack = {
+            id:item.id, name:item.name, icon:item.icon || "📦",
+            weight:Number(item.weight || 0), volume:Number(item.volume || 0),
+            external:!!item.external, quantity:0
+        };
+        baseStorage.push(stack);
+    }
+    stack.quantity += 1;
+    inventory.splice(index, 1);
+    saveInventory(); saveBaseStorage();
+    updateInventoryUI(); renderBaseStorage();
+}
+
+function moveStorageItemToInventory(stackIndex) {
+    const stack = baseStorage[stackIndex];
+    if (!stack || stack.quantity <= 0) return;
+    const volume = stack.external ? 0 : Number(stack.volume || 0);
+    if (!canAddItem(Number(stack.weight || 0), volume)) {
+        setStorageWarning("Немає місця в рюкзаку!");
+        return;
+    }
+    inventory.push({
+        id:stack.id, name:stack.name, icon:stack.icon,
+        weight:Number(stack.weight || 0), volume:Number(stack.volume || 0),
+        external:!!stack.external, uid:Date.now()
+    });
+    stack.quantity -= 1;
+    if (stack.quantity <= 0) baseStorage.splice(stackIndex, 1);
+    saveInventory(); saveBaseStorage();
+    updateInventoryUI(); renderBaseStorage();
+}
+
+function renderBaseStorage() {
+    const modal = document.getElementById("baseStorageModal");
+    if (!modal) return;
+    const weight = getBaseStorageWeight();
+    document.getElementById("storageWeightText").textContent = `Сховище: ${weight.toFixed(1)} / ${BASE_STORAGE_MAX_WEIGHT.toFixed(1)} кг`;
+    document.getElementById("storageWeightFill").style.width = `${Math.min(100, weight / BASE_STORAGE_MAX_WEIGHT * 100)}%`;
+    document.getElementById("storageBackpackSummary").textContent = `Рюкзак: ${getInventoryWeight().toFixed(1)} / ${MAX_INVENTORY_WEIGHT.toFixed(1)} кг (${formatLiters(getInventoryVolume())} / ${formatLiters(MAX_INVENTORY_VOLUME)} л)`;
+
+    const grid = document.getElementById("storageGrid");
+    grid.innerHTML = "";
+    for (let i=0; i<BASE_STORAGE_SLOTS; i++) {
+        const stack = baseStorage[i];
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "storage-cell" + (stack ? "" : " empty");
+        if (stack) {
+            cell.innerHTML = `<span class="item-icon">${stack.icon || "📦"}</span><span class="item-name"></span><span class="item-count">×${stack.quantity}</span>`;
+            cell.querySelector(".item-name").textContent = stack.name;
+            cell.title = `${stack.name}: ${Number(stack.weight).toFixed(1)} кг × ${stack.quantity}`;
+            cell.addEventListener("click", () => moveStorageItemToInventory(i));
+        } else {
+            cell.disabled = true;
+            cell.setAttribute("aria-label", "Порожня комірка");
+        }
+        grid.appendChild(cell);
+    }
+
+    const list = document.getElementById("storageBackpackList");
+    list.innerHTML = "";
+    if (!inventory.length) {
+        const empty = document.createElement("div"); empty.className="storage-empty-text"; empty.textContent="Рюкзак порожній"; list.appendChild(empty);
+    } else {
+        inventory.forEach((item, index) => {
+            const btn = document.createElement("button"); btn.type="button"; btn.className="storage-backpack-item";
+            const icon=document.createElement("span"); icon.className="bp-icon"; icon.textContent=item.icon || "📦";
+            const info=document.createElement("span");
+            const name=document.createElement("div"); name.className="bp-name"; name.textContent=item.name;
+            const stats=document.createElement("div"); stats.className="bp-stats"; stats.textContent=`${Number(item.weight || 0).toFixed(1)} кг · ${formatLiters(item.external ? 0 : Number(item.volume || 0))} л`;
+            info.append(name,stats); btn.append(icon,info);
+            btn.addEventListener("click", () => moveInventoryItemToStorage(index));
+            list.appendChild(btn);
+        });
+    }
+}
+
+loadBaseStorage();
+
+document.getElementById("closeBaseStorage").addEventListener("click", () => {
+    document.getElementById("baseStorageModal").classList.add("hidden");
+});
+document.getElementById("baseStorageModal").addEventListener("click", e => {
+    if (e.target.id === "baseStorageModal") e.currentTarget.classList.add("hidden");
+});
+
 
 let gameMessageTimer = null;
 function showGameMessage(message, type = "") {
@@ -1839,9 +2040,10 @@ function captureBuilding(record) {
 
 function openBaseStorage(record) {
     if (getBuildingDistance(record) > BASE_PROTECTION_RADIUS) return refreshOpenBuildingPopup();
-    const weight = getInventoryWeight().toFixed(1);
-    const volume = formatLiters(getInventoryVolume());
-    gpsStatus.textContent = `📦 Склад Бази доступний · Рюкзак ${weight}/${MAX_INVENTORY_WEIGHT.toFixed(1)} кг · ${volume}/${formatLiters(MAX_INVENTORY_VOLUME)} л`;
+    setStorageWarning("");
+    renderBaseStorage();
+    document.getElementById("baseStorageModal").classList.remove("hidden");
+    if (map) map.closePopup();
 }
 
 /* =========================================================
