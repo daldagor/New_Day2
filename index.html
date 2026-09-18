@@ -45,53 +45,6296 @@
                 sans-serif;
         }
 
+        /* =========================
+           MAP
+        ========================== */
+
+        #map {
+            position: fixed;
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+
+            z-index: 1;
+        }
+
+        /* =========================
+           FOG CANVAS
+        ========================== */
+
+        #fogCanvas {
+            position: fixed;
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+
+            z-index: 500;
+
+            pointer-events: none;
+        }
+
+        /* =========================
+           GAME HUD
+        ========================== */
+
+        #gameUI {
+            position: fixed;
+
+            top: 0;
+            left: 0;
+            right: 0;
+
+            z-index: 1200;
+
+            padding:
+                calc(10px + env(safe-area-inset-top))
+                12px
+                10px;
+
+            color: white;
+
+            background:
+                linear-gradient(
+                    to bottom,
+                    rgba(7, 12, 18, 0.96),
+                    rgba(7, 12, 18, 0.76)
+                );
+
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+
+            border-bottom:
+                1px solid rgba(255,255,255,0.12);
+
+            box-shadow:
+                0 5px 20px rgba(0,0,0,0.35);
+        }
+
+        .hud-main {
+            display: flex;
+
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 10px;
+        }
+
+        .player-info {
+            min-width: 0;
+        }
+
+        .player-name {
+            font-size: 15px;
+            font-weight: 800;
+
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .hp-row {
+            margin-top: 4px;
+
+            font-size: 12px;
+
+            color: #cbd6df;
+        }
+
+        .hp-bar {
+            width: 100px;
+            height: 5px;
+
+            margin-top: 4px;
+
+            overflow: hidden;
+
+            border-radius: 20px;
+
+            background:
+                rgba(255,255,255,0.16);
+        }
+
+        .hp-fill {
+            width: 100%;
+            height: 100%;
+
+            background: #48df79;
+        }
+
+        .speed-box {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        #speed {
+            font-size: 23px;
+            font-weight: 900;
+        }
+
+        .speed-unit {
+            font-size: 10px;
+
+            color: #aab7c3;
+        }
+
+        /* =========================
+           SECOND HUD ROW
+        ========================== */
+
+        .hud-controls {
+            display: flex;
+
+            align-items: center;
+
+            gap: 7px;
+
+            margin-top: 9px;
+
+            overflow-x: auto;
+
+            scrollbar-width: none;
+        }
+
+        .hud-controls::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hud-chip,
+        .hud-button {
+            flex: 0 0 auto;
+
+            border:
+                1px solid rgba(255,255,255,0.15);
+
+            border-radius: 10px;
+
+            padding: 7px 10px;
+
+            color: white;
+
+            background:
+                rgba(255,255,255,0.09);
+
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .hud-button {
+            cursor: pointer;
+        }
+
+        .hud-button:active {
+            transform: scale(0.96);
+        }
+
+        #flashlightButton.active {
+            background:
+                rgba(255, 211, 77, 0.22);
+
+            border-color:
+                rgba(255, 211, 77, 0.55);
+
+            color: #ffe58b;
+        }
+
+        #biomeButton.field {
+            background:
+                rgba(77, 199, 110, 0.20);
+
+            border-color:
+                rgba(77, 199, 110, 0.45);
+        }
+
+        /* =========================
+           PLAYER MARKER
+        ========================== */
+
+        .player-marker-wrapper {
+            position: relative;
+
+            width: 24px;
+            height: 24px;
+        }
+
+        .player-marker {
+            position: absolute;
+
+            left: 0;
+            top: 0;
+
+            width: 24px;
+            height: 24px;
+
+            border-radius: 50%;
+
+            background: #168cff;
+
+            border: 4px solid white;
+
+            box-shadow:
+                0 0 0 6px rgba(22,140,255,0.22),
+                0 3px 10px rgba(0,0,0,0.55);
+
+            z-index: 2;
+        }
+
+        .player-pulse {
+            position: absolute;
+
+            left: -10px;
+            top: -10px;
+
+            width: 44px;
+            height: 44px;
+
+            border-radius: 50%;
+
+            background:
+                rgba(22,140,255,0.27);
+
+            animation:
+                playerPulse 2s infinite;
+        }
+
+        @keyframes playerPulse {
+
+            0% {
+                transform: scale(0.5);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1.7);
+                opacity: 0;
+            }
+
+        }
+
+        /* =========================
+           COMPASS / CENTER BUTTON
+        ========================== */
+
+        #centerButton {
+            position: fixed;
+            right: 18px;
+            bottom: calc(24px + env(safe-area-inset-bottom));
+            z-index: 1500;
+            width: 58px;
+            height: 58px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.22);
+            background: rgba(10,16,23,0.94);
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 6px 22px rgba(0,0,0,0.50);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        #centerButton:active {
+            transform: scale(0.90);
+        }
+
+        /* =========================
+           GPS STATUS
+        ========================== */
+
+        #gpsStatus {
+            position: fixed;
+
+            left: 50%;
+
+            bottom:
+                calc(
+                    20px +
+                    env(safe-area-inset-bottom)
+                );
+
+            transform:
+                translateX(-50%);
+
+            z-index: 1300;
+
+            padding: 9px 14px;
+
+            border-radius: 20px;
+
+            color: white;
+
+            background:
+                rgba(8,13,19,0.88);
+
+            backdrop-filter: blur(8px);
+
+            font-size: 12px;
+
+            white-space: nowrap;
+
+            box-shadow:
+                0 4px 15px rgba(0,0,0,0.35);
+        }
+
+        /* =========================
+           LOGIN
+        ========================== */
+
+        #loginScreen {
+            position: fixed;
+            inset: 0;
+
+            z-index: 5000;
+
+            display: flex;
+
+            justify-content: center;
+            align-items: center;
+
+            padding: 24px;
+
+            background:
+
+                radial-gradient(
+                    circle at 30% 20%,
+                    #23466b 0%,
+                    transparent 40%
+                ),
+
+                radial-gradient(
+                    circle at 80% 80%,
+                    #102d48 0%,
+                    transparent 40%
+                ),
+
+                linear-gradient(
+                    145deg,
+                    #07111d,
+                    #101b28
+                );
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 390px;
+
+            padding: 38px 26px 30px;
+
+            text-align: center;
+
+            color: white;
+
+            border-radius: 26px;
+
+            background:
+                rgba(255,255,255,0.08);
+
+            border:
+                1px solid rgba(255,255,255,0.14);
+
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+
+            box-shadow:
+                0 25px 60px rgba(0,0,0,0.45);
+        }
+
+        .game-logo {
+            width: 78px;
+            height: 78px;
+
+            margin:
+                0 auto 20px;
+
+            display: flex;
+
+            justify-content: center;
+            align-items: center;
+
+            border-radius: 24px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #168cff,
+                    #00d0ff
+                );
+
+            font-size: 38px;
+
+            box-shadow:
+                0 12px 30px
+                rgba(0,140,255,0.35);
+        }
+
+        .login-card h1 {
+            font-size: 30px;
+
+            margin-bottom: 10px;
+        }
+
+        .login-card p {
+            margin-bottom: 30px;
+
+            color: #b9c6d3;
+
+            font-size: 14px;
+
+            line-height: 1.5;
+        }
+
+        #googleLogin {
+            width: 100%;
+
+            border: none;
+
+            border-radius: 14px;
+
+            padding: 16px;
+
+            background: white;
+
+            color: #222;
+
+            font-size: 15px;
+            font-weight: 800;
+
+            cursor: pointer;
+        }
+
+        .prototype-note {
+            margin-top: 18px !important;
+            margin-bottom: 0 !important;
+
+            font-size: 11px !important;
+
+            color: #718091 !important;
+        }
+
+        /* =========================
+           INVENTORY
+        ========================== */
+
+        #inventoryModal {
+            position: fixed; inset: 0; z-index: 4000;
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px; background: rgba(0,0,0,0.72);
+        }
+        .inventory-card {
+            width: min(430px, 100%); max-height: 82vh; overflow: auto;
+            padding: 20px; border-radius: 18px; color: white;
+            background: rgba(10,16,23,0.97);
+            border: 1px solid rgba(255,255,255,0.16);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+        }
+        .inventory-header { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+        .inventory-header h2 { font-size: 21px; }
+        .inventory-summary { margin: 16px 0; font-size: 14px; font-weight: 800; }
+        .capacity-label { display:flex; justify-content:space-between; margin:10px 0 5px; font-size:12px; color:#cbd6df; }
+        .capacity-bar { height:8px; overflow:hidden; border-radius:10px; background:rgba(255,255,255,.12); }
+        .capacity-fill { height:100%; width:0%; background:#48df79; transition:width .2s; }
+        #inventoryItems { margin-top:16px; display:grid; gap:9px; }
+        .inventory-item { display:flex; align-items:center; gap:12px; padding:12px; border-radius:12px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.10); }
+        .inventory-icon { font-size:28px; }
+        .inventory-item-name { font-weight:800; font-size:14px; }
+        .inventory-item-stats { margin-top:3px; color:#b9c6d3; font-size:12px; }
+        #closeInventory { margin-top:18px; width:100%; padding:12px; border:0; border-radius:11px; font-weight:800; cursor:pointer; }
+
+        #chopWoodButton.unavailable { opacity: .48; filter: grayscale(.35); }
+        #gameMessage {
+            position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%);
+            z-index: 5000; width: min(420px, calc(100% - 32px)); padding: 13px 16px;
+            border-radius: 12px; color: white; text-align: center; font-size: 13px; font-weight: 800;
+            background: rgba(24,34,44,.96); border: 1px solid rgba(255,255,255,.16);
+            box-shadow: 0 8px 28px rgba(0,0,0,.45); pointer-events: none;
+        }
+        #gameMessage.error { background: rgba(135,25,25,.97); border-color: rgba(255,120,120,.55); }
+        #gameMessage.success { background: rgba(22,105,58,.97); border-color: rgba(100,230,145,.5); }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /*
+            Leaflet controls lower
+            because HUD occupies top.
+        */
+
+        .leaflet-top {
+            top: 125px;
+        }
+
+
+
+        /* BUILDING POPUPS */
+        .leaflet-popup-content-wrapper,
+        .leaflet-popup-tip { background: rgba(10,16,23,.97); color:#fff; }
+        .leaflet-popup-content { margin:14px 16px; min-width:210px; }
+        .building-popup { font-family: Arial, sans-serif; }
+        .building-popup-title { font-weight:900; font-size:15px; margin-bottom:10px; }
+        .building-popup-distance { color:#b9c6d3; font-size:12px; margin-bottom:10px; }
+        .building-popup-actions { display:grid; gap:8px; }
+        .building-action {
+            width:100%; border:1px solid rgba(255,255,255,.18); border-radius:10px;
+            padding:10px 12px; background:rgba(255,255,255,.11); color:#fff;
+            font-weight:800; cursor:pointer;
+        }
+        .building-action.capture { background:rgba(56,180,105,.22); border-color:rgba(56,180,105,.55); }
+        .building-action.search { background:rgba(45,133,255,.22); border-color:rgba(45,133,255,.55); }
+        .building-action.storage { background:rgba(56,180,105,.30); border-color:rgba(56,180,105,.70); }
+        .building-action:disabled { opacity:.38; cursor:not-allowed; }
+        .building-popup-warning { margin-top:9px; color:#ff6868; font-size:12px; font-weight:800; line-height:1.35; }
+        .building-popup-ok { color:#76dc98; font-size:12px; margin-top:8px; }
+
+    
+
+        /* BASE STORAGE MODAL */
+        #baseStorageModal {
+            position: fixed; inset: 0; z-index: 5000;
+            background: rgba(4,8,12,.92); backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px); padding: 18px;
+            overflow-y: auto;
+        }
+        .storage-shell { width:min(920px,100%); min-height:calc(100vh - 36px); margin:0 auto; display:flex; flex-direction:column; gap:16px; }
+        .storage-top { background:rgba(15,24,32,.96); border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:18px; box-shadow:0 12px 35px rgba(0,0,0,.35); }
+        .storage-header { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+        .storage-header h2 { margin:0; font-size:22px; }
+        .storage-level { color:#aebdca; font-size:13px; margin-top:4px; }
+        #storageWeightText { margin-top:14px; font-weight:900; font-size:16px; }
+        .storage-weight-bar { height:10px; margin-top:8px; border-radius:999px; background:rgba(255,255,255,.10); overflow:hidden; }
+        #storageWeightFill { height:100%; width:0%; background:#68d391; transition:width .2s ease; }
+        #storageWarning { margin-top:10px; color:#ff6b6b; font-size:13px; font-weight:800; min-height:18px; }
+        .storage-body { display:grid; grid-template-columns:minmax(0,1fr) minmax(260px,.62fr); gap:16px; flex:1; }
+        .storage-panel { background:rgba(15,24,32,.96); border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:16px; }
+        .storage-panel h3 { margin:0 0 12px; font-size:16px; }
+        #storageGrid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:9px; }
+        .storage-cell { aspect-ratio:1/1; min-width:0; border-radius:12px; border:1px solid rgba(255,255,255,.13); background:rgba(255,255,255,.055); display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; padding:5px; color:#fff; cursor:pointer; }
+        .storage-cell.empty { cursor:default; background:rgba(150,160,170,.07); border-style:dashed; }
+        .storage-cell .item-icon { font-size:25px; line-height:1; }
+        .storage-cell .item-name { font-size:9px; text-align:center; margin-top:5px; line-height:1.1; overflow:hidden; max-width:100%; }
+        .storage-cell .item-count { position:absolute; right:5px; bottom:4px; font-size:11px; font-weight:900; background:rgba(0,0,0,.68); padding:2px 5px; border-radius:7px; }
+        #storageBackpackList { display:grid; gap:8px; }
+        .storage-backpack-item { width:100%; display:flex; align-items:center; gap:10px; text-align:left; padding:10px; border-radius:11px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.07); color:#fff; cursor:pointer; }
+        .storage-backpack-item:active { transform:scale(.98); }
+        .storage-backpack-item .bp-icon { font-size:24px; }
+        .storage-backpack-item .bp-name { font-weight:800; font-size:13px; }
+        .storage-backpack-item .bp-stats { color:#b8c5d0; font-size:11px; margin-top:2px; }
+        .storage-empty-text { color:#91a0ad; font-size:13px; }
+        #closeBaseStorage { border:0; border-radius:12px; padding:11px 15px; font-weight:900; cursor:pointer; }
+        @media (max-width:720px) {
+            #baseStorageModal { padding:10px; }
+            .storage-shell { min-height:calc(100vh - 20px); }
+            .storage-body { grid-template-columns:1fr; }
+            #storageGrid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+        }
+
+    
+/* Base Storage: force readable white typography on the dark modal */
+#baseStorageModal,
+#baseStorageModal *,
+#storageModal,
+#storageModal *,
+.storage-modal,
+.storage-modal *,
+.base-storage-modal,
+.base-storage-modal * {
+    color: #ffffff !important;
+}
+
+
+/* ===== Building loot window ===== */
+#buildingLootModal {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(0,0,0,.72);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+#buildingLootModal.open { display: flex; }
+#buildingLootModal, #buildingLootModal * { color: #fff !important; box-sizing: border-box; }
+.building-loot-panel {
+    width: min(620px, 100%);
+    max-height: 88vh;
+    overflow: auto;
+    border-radius: 22px;
+    padding: 18px;
+    background: rgba(12,18,25,.97);
+    border: 1px solid rgba(255,255,255,.18);
+    box-shadow: 0 20px 60px rgba(0,0,0,.55);
+}
+.building-loot-head {
+    display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px;
+}
+.building-loot-head h2 { margin:0; font-size:21px; }
+.loot-close, #takeAllBuildingLoot {
+    border:1px solid rgba(255,255,255,.22);
+    background:rgba(255,255,255,.10);
+    border-radius:12px;
+    padding:10px 13px;
+    font-weight:700;
+    cursor:pointer;
+}
+#takeAllBuildingLoot {
+    width:100%; margin-top:14px; background:rgba(52,152,219,.24);
+}
+#takeAllBuildingLoot:disabled { opacity:.38; cursor:not-allowed; }
+#buildingLootGrid {
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0,1fr));
+    gap:10px;
+}
+.building-loot-cell {
+    aspect-ratio:1/1;
+    min-width:0;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.15);
+    background:rgba(255,255,255,.075);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:8px;
+    cursor:pointer;
+    position:relative;
+}
+.building-loot-cell.empty { opacity:.42; cursor:default; }
+.building-loot-cell .loot-icon { font-size:28px; margin-bottom:5px; }
+.building-loot-cell .loot-name { font-size:11px; line-height:1.15; }
+.building-loot-cell .loot-count {
+    position:absolute; right:7px; bottom:5px; font-size:12px; font-weight:800;
+}
+#buildingLootMessage { min-height:20px; margin-top:11px; font-size:13px; }
+#buildingLootMessage.error { color:#ff7676 !important; }
+#buildingLootMessage.success { color:#8ff0a4 !important; }
+@media (max-width:460px) {
+    #buildingLootGrid { grid-template-columns:repeat(3, minmax(0,1fr)); }
+}
+
+
+/* ===== OSM building type icons ===== */
+.building-type-icon-wrap {
+    background: transparent !important;
+    border: 0 !important;
+}
+.building-type-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(10,16,23,.92);
+    border: 1px solid rgba(255,255,255,.42);
+    box-shadow: 0 3px 12px rgba(0,0,0,.55);
+    font-size: 19px;
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+}
+.building-type-icon.base {
+    background: rgba(32,125,66,.95);
+}
+
+
+/* ===== Backpack grid UI ===== */
+#inventoryModal .inventory-items,
+#inventoryModal #inventoryItems,
+#backpackModal .inventory-items,
+#backpackModal #inventoryItems,
+.inventory-modal .inventory-items,
+.inventory-modal #inventoryItems {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+.backpack-grid-cell {
+    aspect-ratio: 1 / 1;
+    min-width: 0;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.16);
+    background: rgba(255,255,255,.075);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 8px;
+    position: relative;
+    color: #fff !important;
+}
+.backpack-grid-cell.empty {
+    opacity: .38;
+}
+.backpack-grid-cell .backpack-icon {
+    font-size: 29px;
+    line-height: 1;
+    margin-bottom: 6px;
+}
+.backpack-grid-cell .backpack-name {
+    font-size: 11px;
+    line-height: 1.15;
+    word-break: break-word;
+}
+.backpack-grid-cell .backpack-count {
+    position: absolute;
+    right: 7px;
+    bottom: 5px;
+    font-size: 12px;
+    font-weight: 800;
+}
+.backpack-grid-cell .backpack-external {
+    position: absolute;
+    left: 6px;
+    top: 5px;
+    font-size: 9px;
+    opacity: .7;
+}
+@media (max-width: 460px) {
+    #inventoryModal .inventory-items,
+    #inventoryModal #inventoryItems,
+    #backpackModal .inventory-items,
+    #backpackModal #inventoryItems,
+    .inventory-modal .inventory-items,
+    .inventory-modal #inventoryItems {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+}
+
+
+/* ===== PROFILE ===== */
+#profileModal {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0,0,0,.74);
+    backdrop-filter: blur(9px);
+    -webkit-backdrop-filter: blur(9px);
+}
+.profile-card {
+    width: min(430px, 100%);
+    padding: 20px;
+    border-radius: 20px;
+    color: #fff;
+    background: rgba(10,16,23,.98);
+    border: 1px solid rgba(255,255,255,.16);
+    box-shadow: 0 20px 60px rgba(0,0,0,.55);
+}
+.profile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.profile-header h2 { margin: 0; font-size: 21px; }
+#closeProfile {
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 11px;
+    padding: 9px 12px;
+    color: #fff;
+    background: rgba(255,255,255,.09);
+    font-weight: 800;
+    cursor: pointer;
+}
+.profile-player {
+    margin-top: 8px;
+    color: #aebdca;
+    font-size: 13px;
+}
+.profile-distance-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 18px;
+}
+.profile-stat {
+    min-width: 0;
+    padding: 18px 10px;
+    border-radius: 16px;
+    text-align: center;
+    background: rgba(255,255,255,.065);
+    border: 1px solid rgba(255,255,255,.11);
+}
+.profile-stat-icon { font-size: 28px; }
+.profile-stat-label {
+    margin-top: 8px;
+    color: #b8c5d0;
+    font-size: 11px;
+}
+.profile-stat-value {
+    margin-top: 5px;
+    font-size: 22px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+.profile-note {
+    margin-top: 16px;
+    color: #81909e;
+    font-size: 11px;
+    line-height: 1.45;
+    text-align: center;
+}
+
+
+/* ===== Carrying systems ===== */
+.carry-title { margin:14px 0 8px; font-size:12px; color:#aebdca; font-weight:800; }
+#carrySystems { display:grid; gap:8px; margin-bottom:14px; }
+.carry-system {
+    width:100%; display:flex; align-items:center; gap:11px; text-align:left;
+    border:1px solid rgba(255,255,255,.12); border-radius:12px;
+    padding:10px; color:#fff; background:rgba(255,255,255,.06); cursor:pointer;
+}
+.carry-system.active { border-color:rgba(72,223,121,.65); background:rgba(72,223,121,.13); }
+.carry-system .carry-icon { font-size:27px; }
+.carry-system span:nth-child(2) { flex:1; display:flex; flex-direction:column; }
+.carry-system small { color:#aebdca; margin-top:3px; font-size:10px; }
+.carry-system strong { font-size:9px; color:#79e69b; }
+
+
+
+.building-transfer-divider {
+    height:1px; background:rgba(255,255,255,.12); margin:15px 0 12px;
+}
+.building-transfer-title {
+    font-size:12px; font-weight:900; margin-bottom:9px; color:#d7e0e8 !important;
+}
+#buildingBackpackGrid .building-loot-cell {
+    cursor:pointer;
+}
+
+
+
+/* ===== Thirst directly under health ===== */
+.thirst-under-health {
+    width:100%;
+    margin-top:5px;
+    pointer-events:none;
+    color:#fff;
+}
+.thirst-row {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:11px;
+    font-weight:800;
+    margin-bottom:3px;
+}
+.thirst-health-style-bar {
+    width:100%;
+    height:7px;
+    overflow:hidden;
+    border-radius:6px;
+    background:rgba(255,255,255,.16);
+}
+#thirstFill {
+    display:block;
+    height:100%;
+    width:100%;
+    background:#54b9ff;
+    transition:width .25s linear;
+}
+#thirstMode {
+    display:block;
+    margin-top:2px;
+    text-align:right;
+    font-size:8px;
+    opacity:.65;
+}
+
+
+.inventory-item-actions {
+    position:fixed;
+    left:50%;
+    bottom:24px;
+    transform:translateX(-50%);
+    z-index:10050;
+    width:min(320px, calc(100vw - 28px));
+    padding:12px;
+    border-radius:14px;
+    background:rgba(18,23,29,.97);
+    border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 10px 35px rgba(0,0,0,.45);
+    display:grid;
+    gap:8px;
+}
+.inventory-action-title {
+    font-size:13px;
+    font-weight:900;
+    color:#fff;
+    padding:2px 3px 5px;
+}
+.inventory-item-actions button {
+    min-height:42px;
+    border:0;
+    border-radius:10px;
+    font-weight:900;
+    cursor:pointer;
+}
+
+
+/* ===== THIRST BAR: directly under HP ===== */
+#thirstHud.thirst-under-health {
+    display:block !important;
+    width:100px !important;
+    margin:4px 0 8px 12px !important;
+    padding:0 !important;
+    color:#8fd3ff !important;
+    pointer-events:none !important;
+}
+#thirstHud .thirst-row {
+    display:flex !important;
+    width:100px !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    margin:0 0 3px 0 !important;
+    font-size:10px !important;
+    line-height:12px !important;
+    color:#8fd3ff !important;
+}
+#thirstHud #thirstMode {
+    display:none !important;
+}
+#thirstHud .thirst-bar {
+    display:block !important;
+    width:100px !important;
+    height:5px !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    border-radius:4px !important;
+    background:rgba(84,185,255,.20) !important;
+}
+#thirstHud #thirstFill {
+    display:block !important;
+    width:100%;
+    height:5px !important;
+    margin:0 !important;
+    background:#2196f3 !important;
+    border-radius:4px !important;
+    transition:width .25s linear;
+}
+
+
+/* ===== HUNGER BAR: directly under thirst ===== */
+#hungerHud.hunger-under-thirst {
+    display:block !important;
+    width:100px !important;
+    margin:4px 0 8px 12px !important;
+    padding:0 !important;
+    color:#ffb74d !important;
+    pointer-events:none !important;
+}
+#hungerHud .hunger-row {
+    display:flex !important;
+    width:100px !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    margin:0 0 3px 0 !important;
+    font-size:10px !important;
+    line-height:12px !important;
+    color:#ffb74d !important;
+}
+#hungerHud .hunger-bar {
+    display:block !important;
+    width:100px !important;
+    height:5px !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    border-radius:4px !important;
+    background:rgba(255,183,77,.20) !important;
+}
+#hungerHud #hungerFill {
+    display:block !important;
+    width:100%;
+    height:5px !important;
+    margin:0 !important;
+    background:#ff9800 !important;
+    border-radius:4px !important;
+    transition:width .25s linear;
+}
+
+
+#buildingLootGrid, #buildingBackpackGrid {
+    display:grid !important;
+    grid-template-columns:repeat(4, minmax(0,1fr)) !important;
+    gap:7px !important;
+}
+@media (max-width:520px) {
+    #buildingLootGrid, #buildingBackpackGrid {
+        grid-template-columns:repeat(3, minmax(0,1fr)) !important;
+    }
+}
+
+
+/* ===== Stranded car ===== */
+.stranded-car-map-icon { background:transparent !important; border:0 !important; }
+.stranded-car-map-icon div {
+    width:38px; height:38px; display:flex; align-items:center; justify-content:center;
+    font-size:27px; border-radius:50%; background:rgba(12,18,24,.88);
+    border:2px solid rgba(255,193,7,.9); box-shadow:0 3px 12px rgba(0,0,0,.55);
+}
+.emergency-unload-modal.show { display:flex !important; }
+.emergency-unload-content { max-width:520px !important; max-height:92vh; overflow:auto; }
+#strandedCarGrid, #strandedBackpackGrid {
+    display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px;
+}
+.transfer-heading { margin:14px 0 8px; font-size:12px; font-weight:900; }
+#strandedLoadSummary {
+    margin:10px 0; padding:9px; border-radius:10px;
+    background:rgba(255,255,255,.06); font-size:11px;
+}
+.load-ok { color:#65e68d; margin-left:5px; }
+.load-over { color:#ffb74d; margin-left:5px; }
+#finishEmergencyUnload, #recoverStrandedCar {
+    width:100%; min-height:44px; margin-top:10px; border:0; border-radius:10px;
+    font-weight:900; cursor:pointer;
+}
+#finishEmergencyUnload:disabled { opacity:.35; cursor:not-allowed; }
+@media(max-width:520px) {
+    #strandedCarGrid, #strandedBackpackGrid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+
+
+/* Wood chopping is available only after nearby mapped trees are confirmed. */
+#chopWoodBtn { display:none; }
+
+
+/* Natural-water actions */
+#collectWaterBtn, #fishBtn {
+    min-height:34px;
+    border-radius:9px;
+    font-weight:800;
+}
+
+
+/* Special OSM building icons */
+.special-building-marker-wrap {
+    background:transparent !important;
+    border:0 !important;
+}
+.special-building-marker {
+    width:28px;
+    height:28px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:50%;
+    background:rgba(18,18,18,.88);
+    border:2px solid rgba(255,255,255,.9);
+    box-shadow:0 2px 7px rgba(0,0,0,.55);
+    font-size:17px;
+    line-height:1;
+    user-select:none;
+}
+.special-building-marker.depleted {
+    opacity:.48;
+    filter:grayscale(1);
+}
+
+
+/* Emergency car unload must exist only after an actually owned car runs out of fuel. */
+#emergencyUnloadModal {
+    display: none !important;
+}
+#emergencyUnloadModal.show {
+    display: flex !important;
+}
+
+</style>
+</head>
+
+<body>
+
+<button id="collectWaterBtn" type="button" onclick="collectNaturalWater()" style="display:none;">💧 Набрати воду</button>
+<button id="fishBtn" type="button" onclick="fishAtNaturalWater()" style="display:none;">🎣 Ловити рибу</button>
+
+
+    <!-- MAP -->
+
+    <div id="map"></div>
+
+
+    <!--
+        Canvas is ABOVE map but BELOW HUD.
+
+        All fog rendering happens here.
+    -->
+
+    <canvas id="fogCanvas"></canvas>
+
+
+    <!-- GAME HUD -->
+
+    <div
+        id="gameUI"
+        class="hidden"
+    >
+
+        <div class="hud-main">
+
+            <div class="player-info">
+
+                <div class="player-name">
+                    Gamer_Gmail
+                </div>
+
+                <div class="hp-row">
+                    HP:
+                    <span id="hp">
+                        100
+                    </span>
+                </div>
+
+                <div class="hp-bar">
+                    <div class="hp-fill"></div>
+                </div>
+
+            </div>
+
+
+            <div class="speed-box">
+
+                <div id="speed">
+                    0.0
+                </div>
+
+                <div class="speed-unit">
+                    км/год
+                </div>
+
+            </div>
+
+        </div>
+
+
         
+<div id="thirstHud" class="thirst-under-health">
+    <div class="thirst-row">
+        <span>Спрага: <span id="thirstValue">100%</span></span>
+        <small id="thirstMode">спокій</small>
+    </div>
+    <div class="thirst-bar">
+        <div id="thirstFill"></div>
+    </div>
+</div>
+
+<div id="hungerHud" class="hunger-under-thirst">
+    <div class="hunger-row">
+        <span>Голод: <span id="hungerValue">100%</span></span>
+    </div>
+    <div class="hunger-bar">
+        <div id="hungerFill"></div>
+    </div>
+</div>
+
+
+<div class="hud-controls">
+
+            <div
+                id="timeMode"
+                class="hud-chip"
+            >
+                ☀️ День
+            </div>
+<button
+                id="flashlightButton"
+                class="hud-button"
+            >
+                🔦 Увімкнути
+            </button>
+
+            <button id="profileButton" class="hud-button">
+                👤 Профіль
+            </button>
+
+<button id="inventoryButton" class="hud-button">
+                🎒 Рюкзак
+            </button>
+
+            <button id="chopWoodButton" class="hud-button unavailable">
+                🪓 Рубати дрова
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- COMPASS: CENTER MAP ON CURRENT GPS POSITION -->
+
+    <button
+        id="centerButton"
+        class="hidden"
+        title="Повернутися до моєї позиції"
+        aria-label="Повернутися до моєї позиції"
+    >
+        🧭
+    </button>
+
+
+    <!-- GPS STATUS -->
+
+    <div
+        id="gpsStatus"
+        class="hidden"
+    >
+        Пошук GPS...
+    </div>
+
+
+
+    <!-- PROFILE MODAL -->
+    <div id="profileModal" class="hidden">
+        <div class="profile-card">
+            <div class="profile-header">
+                <h2>👤 Профіль</h2>
+                <button id="closeProfile">Закрити</button>
+            </div>
+
+            <div class="profile-player">Gamer_Gmail</div>
+
+            <div class="profile-distance-grid">
+                <div class="profile-stat">
+                    <div class="profile-stat-icon">🚶</div>
+                    <div class="profile-stat-label">Пройдено сьогодні</div>
+                    <div id="todayDistance" class="profile-stat-value">0.00 км</div>
+                </div>
+
+                <div class="profile-stat">
+                    <div class="profile-stat-icon">🌍</div>
+                    <div class="profile-stat-label">Пройдено всього</div>
+                    <div id="totalDistance" class="profile-stat-value">0.00 км</div>
+                </div>
+            </div>
+
+            <div class="profile-note">
+                Відстань зберігається на цьому пристрої та оновлюється за GPS.
+            </div>
+        </div>
+    </div>
+
+    <!-- INVENTORY MODAL -->
+    <div id="inventoryModal" class="hidden">
+        <div class="inventory-card">
+            <div class="inventory-header">
+                <h2>🎒 Рюкзак</h2>
+            </div>
+            <div id="inventorySummary" class="inventory-summary"></div>
+
+            <div class="carry-title">Спосіб перенесення</div>
+            <div id="carrySystems"></div>
+
+            <div class="capacity-label"><span>Вага</span><span id="weightText"></span></div>
+            <div class="capacity-bar"><div id="weightFill" class="capacity-fill"></div></div>
+            <div class="capacity-label"><span>Об'єм</span><span id="volumeText"></span></div>
+            <div class="capacity-bar"><div id="volumeFill" class="capacity-fill"></div></div>
+            <div id="inventoryItems"></div>
+            <button id="closeInventory">Закрити</button>
+        </div>
+    </div>
+
+
+    <!-- BASE STORAGE MODAL -->
+    <div id="baseStorageModal" class="hidden">
+        <div class="storage-shell">
+            <div class="storage-top">
+                <div class="storage-header">
+                    <div>
+                        <h2>📦 Склад Бази</h2>
+                        <div class="storage-level">🏠 Головна База · Рівень 1</div>
+                    </div>
+                    <button id="closeBaseStorage">Закрити</button>
+                </div>
+                <div id="storageWeightText">Сховище: 0.0 / 50.0 кг</div>
+                <div class="storage-weight-bar"><div id="storageWeightFill"></div></div>
+                <div id="storageWarning"></div>
+            </div>
+            <div class="storage-body">
+                <div class="storage-panel">
+                    <h3>Сховище · 24 комірки</h3>
+                    <div id="storageGrid"></div>
+                </div>
+                <div class="storage-panel">
+                    <h3>🎒 Мій рюкзак</h3>
+                    <div id="storageBackpackSummary" class="inventory-summary"></div>
+                    <div id="storageBackpackList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME MESSAGE -->
+    <div id="gameMessage" class="hidden"></div>
+
+    <!-- LOGIN -->
+
+    <div id="loginScreen">
+
+        <div class="login-card">
+
+            <div class="game-logo">
+                🌍
+            </div>
+
+            <h1>
+                GEO WORLD
+            </h1>
+
+            <p>
+                Досліджуй реальний світ.<br>
+                Відкривай території та
+                розсіюй туман війни.
+            </p>
+
+            <button id="googleLogin">
+                Увійти через Google (Gmail)
+            </button>
+
+            <p class="prototype-note">
+                MVP — тестова авторизація
+                без сервера
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- Leaflet JS -->
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+    </script>
+
+
+<script>
+
+/* =========================================================
+   INVENTORY
+========================================================= */
 const MAX_INVENTORY_WEIGHT = 35.0;
 const MAX_INVENTORY_VOLUME = 80.0;
 
+/* =========================================================
+   CARRYING SYSTEMS — backpack / bicycle / cart / car
+========================================================= */
+const CARRY_SYSTEM_STORAGE_KEY = "geoGameCarrySystemsV1";
+const DEFAULT_CARRY_SYSTEM_ID = "backpack";
 
-let nonCriticalPositionTimer = null;
+const CARRY_SYSTEMS = {
+    backpack: {
+        id: "backpack", name: "Рюкзак", icon: "🎒",
+        maxWeight: 35.0, maxVolume: 80.0
+    },
+    bicycle: {
+        id: "bicycle", name: "Велосипед", icon: "🚲",
+        maxWeight: 60.0, maxVolume: 120.0, thirstMultiplier: 1.35
+    },
+    cart: {
+        id: "cart", name: "Тачка", icon: "🛒",
+        maxWeight: 100.0, maxVolume: 180.0, thirstMultiplier: 1.50
+    },
+    car: {
+        id: "car", name: "Машина", icon: "🚗",
+        maxWeight: 300.0, maxVolume: 500.0, thirstMultiplier: 0.80
+    }
+};
 
-function queueNonCriticalPositionSystems(position, speedKmh) {
-    if (!position || !position.coords) return;
+let carryState = loadCarryState();
 
-    const fix = {
-        coords: {
-            latitude: Number(position.coords.latitude),
-            longitude: Number(position.coords.longitude),
-            accuracy: Number(position.coords.accuracy),
-            speed: position.coords.speed == null ? null : Number(position.coords.speed)
-        },
-        timestamp: Number(position.timestamp) || Date.now()
+function loadCarryState() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(CARRY_SYSTEM_STORAGE_KEY) || "{}");
+        const owned = Array.isArray(saved.owned) ? saved.owned.filter(id => CARRY_SYSTEMS[id]) : [];
+        if (!owned.includes("backpack")) owned.unshift("backpack");
+        const active = owned.includes(saved.active) ? saved.active : "backpack";
+        return { owned, active };
+    } catch (_) {
+        return { owned:["backpack"], active:"backpack" };
+    }
+}
+
+function saveCarryState() {
+    localStorage.setItem(CARRY_SYSTEM_STORAGE_KEY, JSON.stringify(carryState));
+}
+
+function getActiveCarrySystem() {
+    return CARRY_SYSTEMS[carryState.active] || CARRY_SYSTEMS.backpack;
+}
+
+function ownCarrySystem(id) {
+    if (!CARRY_SYSTEMS[id]) return false;
+    if (!carryState.owned.includes(id)) carryState.owned.push(id);
+    carryState.active = id;
+    saveCarryState();
+    updateInventoryUI();
+    renderCarrySystems();
+    return true;
+}
+
+function activateCarrySystem(id) {
+    if (!carryState.owned.includes(id) || !CARRY_SYSTEMS[id]) return;
+    if (id === "car" && strandedCar) {
+        const d = distanceToStrandedCar();
+        if (d > STRANDED_CAR_INTERACTION_RADIUS) {
+            showGameMessage(`🚗 Машина залишилась за ${Math.round(d)} м. Потрібно повернутися до неї.`, "error");
+            return;
+        }
+        if (carFuelState.liters <= 0) {
+            openStrandedCar();
+            showGameMessage("⛽ Машину потрібно заправити.", "error");
+            return;
+        }
+        tryRecoverStrandedCar();
+        return;
+    }
+    const target = CARRY_SYSTEMS[id];
+    const weight = getInventoryWeight();
+    const volume = getInventoryVolume();
+
+    if (weight > target.maxWeight || volume > target.maxVolume) {
+        showGameMessage(
+            `Забагато вантажу для "${target.name}". Спочатку звільніть місце.`,
+            "error"
+        );
+        return;
+    }
+
+    carryState.active = id;
+    saveCarryState();
+    updateInventoryUI();
+    renderCarrySystems();
+}
+
+function renderCarrySystems() {
+    const box = document.getElementById("carrySystems");
+    if (!box) return;
+    box.innerHTML = "";
+
+    carryState.owned.forEach(id => {
+        const system = CARRY_SYSTEMS[id];
+        if (!system) return;
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "carry-system" + (carryState.active === id ? " active" : "");
+        btn.innerHTML = `
+            <span class="carry-icon">${system.icon}</span>
+            <span>
+                <b>${system.name}</b>
+                <small>${system.maxWeight.toFixed(0)} кг · ${system.maxVolume.toFixed(0)} л${id === "car" ? ` · ⛽ ${carFuelState.liters.toFixed(1)}/${CAR_TANK_CAPACITY_L} л` : ""}</small>
+            </span>
+            ${carryState.active === id ? '<strong>АКТИВНО</strong>' : ''}
+        `;
+        btn.addEventListener("click", () => activateCarrySystem(id));
+        box.appendChild(btn);
+    });
+}
+
+
+
+/* =========================================================
+   STRANDED CAR — persistent parked car + emergency unload
+========================================================= */
+const STRANDED_CAR_STORAGE_KEY = "geoGameStrandedCarV1";
+const STRANDED_CAR_INTERACTION_RADIUS = 25;
+const STRANDED_CAR_SLOT_COUNT = 24;
+
+let strandedCar = loadStrandedCar();
+let strandedCarMarker = null;
+let emergencyUnloadOpen = false;
+
+function loadStrandedCar() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(STRANDED_CAR_STORAGE_KEY) || "null");
+        if (!saved || !Number.isFinite(Number(saved.lat)) || !Number.isFinite(Number(saved.lng))) return null;
+        if (!Array.isArray(saved.slots)) saved.slots = Array(STRANDED_CAR_SLOT_COUNT).fill(null);
+        while (saved.slots.length < STRANDED_CAR_SLOT_COUNT) saved.slots.push(null);
+        saved.slots = saved.slots.slice(0, STRANDED_CAR_SLOT_COUNT);
+        return saved;
+    } catch (_) {
+        return null;
+    }
+}
+
+function saveStrandedCar() {
+    if (strandedCar) {
+        localStorage.setItem(STRANDED_CAR_STORAGE_KEY, JSON.stringify(strandedCar));
+    } else {
+        localStorage.removeItem(STRANDED_CAR_STORAGE_KEY);
+    }
+}
+
+function getItemUnitWeight(item) {
+    return Number(item && item.weight || 0);
+}
+function getItemUnitVolume(item) {
+    return item && item.external ? 0 : Number(item && item.volume || 0);
+}
+function inventoryTotalsFor(items) {
+    return items.reduce((a,item) => {
+        a.weight += getItemUnitWeight(item);
+        a.volume += getItemUnitVolume(item);
+        return a;
+    }, {weight:0, volume:0});
+}
+
+function createStrandedCarMarker() {
+    if (!strandedCar || !map) return;
+    if (strandedCarMarker) map.removeLayer(strandedCarMarker);
+
+    const icon = L.divIcon({
+        className: "stranded-car-map-icon",
+        html: '<div>🚗</div>',
+        iconSize: [38,38],
+        iconAnchor: [19,19]
+    });
+
+    strandedCarMarker = L.marker([strandedCar.lat, strandedCar.lng], {
+        icon,
+        zIndexOffset: 900
+    }).addTo(map);
+
+    strandedCarMarker.on("click", () => openStrandedCar());
+}
+
+function strandCarAt(lat, lng) {
+    if (!carryState.owned.includes("car") || carryState.active !== "car") return;
+
+    if (strandedCar) return;
+
+    strandedCar = {
+        lat:Number(lat),
+        lng:Number(lng),
+        createdAt:Date.now(),
+        slots:Array(STRANDED_CAR_SLOT_COUNT).fill(null)
+    };
+    saveStrandedCar();
+    createStrandedCarMarker();
+
+    // Force the player back to the backpack.
+    if (!carryState.owned.includes("backpack")) carryState.owned.unshift("backpack");
+    carryState.active = "backpack";
+    saveCarryState();
+    updateInventoryUI();
+    renderCarrySystems();
+
+    emergencyUnloadOpen = true;
+    renderEmergencyUnload();
+    document.getElementById("emergencyUnloadModal")?.classList.add("show");
+}
+
+function distanceToStrandedCar() {
+    if (!strandedCar || !currentPosition) return Infinity;
+    return getDistance(
+        currentPosition.lat, currentPosition.lng,
+        strandedCar.lat, strandedCar.lng
+    );
+}
+
+function openStrandedCar() {
+    if (!carryState.owned.includes("car") || !strandedCar) return;
+
+    if (!strandedCar) return;
+    const d = distanceToStrandedCar();
+    if (d > STRANDED_CAR_INTERACTION_RADIUS) {
+        showGameMessage(`Машина за ${Math.round(d)} м. Підійди ближче.`, "error");
+        return;
+    }
+    emergencyUnloadOpen = false;
+    const heading = document.querySelector("#emergencyUnloadModal h2");
+    const hint = document.getElementById("strandedUnloadHint");
+    if (heading) heading.textContent = "🚗 Залишена машина";
+    if (hint) hint.textContent = "Тут залишилась твоя машина та речі в ній.";
+    renderEmergencyUnload();
+    document.getElementById("emergencyUnloadModal")?.classList.add("show");
+}
+
+function closeEmergencyUnload() {
+    const backpack = CARRY_SYSTEMS.backpack;
+    const totals = inventoryTotalsFor(inventory);
+
+    // When the car has just run out of fuel, the player cannot leave
+    // until the carried load fits the backpack.
+    if (emergencyUnloadOpen &&
+        (totals.weight > backpack.maxWeight || totals.volume > backpack.maxVolume)) {
+        showGameMessage("Спочатку обери, що залишити в машині. Вантаж має поміститися в рюкзак.", "error");
+        return;
+    }
+
+    emergencyUnloadOpen = false;
+    document.getElementById("emergencyUnloadModal")?.classList.remove("show");
+    updateInventoryUI();
+}
+
+function putItemInStrandedCar(inventoryIndex) {
+    if (!strandedCar) return;
+    const item = inventory[inventoryIndex];
+    if (!item) return;
+
+    let slotIndex = strandedCar.slots.findIndex(slot =>
+        slot && slot.id === item.id && !!slot.external === !!item.external
+    );
+    if (slotIndex < 0) slotIndex = strandedCar.slots.findIndex(slot => !slot);
+    if (slotIndex < 0) {
+        showGameMessage("У машині немає вільних комірок.", "error");
+        return;
+    }
+
+    if (strandedCar.slots[slotIndex]) {
+        strandedCar.slots[slotIndex].quantity =
+            Number(strandedCar.slots[slotIndex].quantity || 1) + 1;
+    } else {
+        strandedCar.slots[slotIndex] = {
+            id:item.id, name:item.name, icon:item.icon || "📦",
+            weight:Number(item.weight || 0), volume:Number(item.volume || 0),
+            external:!!item.external, fuelLiters:item.fuelLiters,
+            quantity:1
+        };
+    }
+
+    inventory.splice(inventoryIndex, 1);
+    saveInventory();
+    saveStrandedCar();
+    updateInventoryUI();
+    renderEmergencyUnload();
+}
+
+function takeItemFromStrandedCar(slotIndex) {
+    if (!strandedCar) return;
+    const item = strandedCar.slots[slotIndex];
+    if (!item) return;
+
+    const backpack = CARRY_SYSTEMS.backpack;
+    const totals = inventoryTotalsFor(inventory);
+    const w = getItemUnitWeight(item);
+    const v = getItemUnitVolume(item);
+
+    if (totals.weight + w > backpack.maxWeight ||
+        totals.volume + v > backpack.maxVolume) {
+        showGameMessage("Це вже не поміститься в рюкзак.", "error");
+        return;
+    }
+
+    inventory.push({
+        id:item.id, name:item.name, icon:item.icon || "📦",
+        weight:w, volume:Number(item.volume || 0),
+        external:!!item.external, fuelLiters:item.fuelLiters,
+        uid:Date.now()
+    });
+
+    item.quantity = Number(item.quantity || 1) - 1;
+    if (item.quantity <= 0) strandedCar.slots[slotIndex] = null;
+
+    saveInventory();
+    saveStrandedCar();
+    updateInventoryUI();
+    renderEmergencyUnload();
+}
+
+function renderEmergencyUnload() {
+    if (!strandedCar) return;
+    const carGrid = document.getElementById("strandedCarGrid");
+    const backpackGrid = document.getElementById("strandedBackpackGrid");
+    const summary = document.getElementById("strandedLoadSummary");
+    const closeBtn = document.getElementById("finishEmergencyUnload");
+    if (!carGrid || !backpackGrid || !summary) return;
+
+    carGrid.innerHTML = "";
+    backpackGrid.innerHTML = "";
+
+    for (let i=0; i<STRANDED_CAR_SLOT_COUNT; i++) {
+        const item = strandedCar.slots[i];
+        const cell = document.createElement(item ? "button" : "div");
+        cell.className = "building-loot-cell" + (item ? "" : " empty");
+        if (item) {
+            cell.innerHTML = `<div class="loot-icon">${item.icon || "📦"}</div>
+                <div class="loot-name">${item.name}</div>
+                <div class="loot-count">×${Number(item.quantity || 1)}</div>`;
+            cell.addEventListener("click", () => takeItemFromStrandedCar(i));
+        }
+        carGrid.appendChild(cell);
+    }
+
+    const groups = [];
+    inventory.forEach(item => {
+        let g = groups.find(x => x.item.id === item.id && !!x.item.external === !!item.external);
+        if (!g) { g={item,count:0}; groups.push(g); }
+        g.count++;
+    });
+
+    groups.slice(0,24).forEach(g => {
+        const cell = document.createElement("button");
+        cell.className = "building-loot-cell";
+        cell.innerHTML = `<div class="loot-icon">${g.item.icon || "📦"}</div>
+            <div class="loot-name">${g.item.name}</div>
+            <div class="loot-count">×${g.count}</div>`;
+        cell.addEventListener("click", () => {
+            const idx = inventory.findIndex(x =>
+                x.id === g.item.id && !!x.external === !!g.item.external
+            );
+            if (idx >= 0) putItemInStrandedCar(idx);
+        });
+        backpackGrid.appendChild(cell);
+    });
+    for (let i=Math.min(groups.length,24); i<24; i++) {
+        const empty=document.createElement("div");
+        empty.className="building-loot-cell empty";
+        backpackGrid.appendChild(empty);
+    }
+
+    const totals = inventoryTotalsFor(inventory);
+    const bp = CARRY_SYSTEMS.backpack;
+    const fits = totals.weight <= bp.maxWeight && totals.volume <= bp.maxVolume;
+    summary.innerHTML =
+        `🎒 Рюкзак: <b>${totals.weight.toFixed(1)}/${bp.maxWeight.toFixed(0)} кг</b> · ` +
+        `<b>${totals.volume.toFixed(1)}/${bp.maxVolume.toFixed(0)} л</b>` +
+        (fits ? ' <span class="load-ok">✓ можна йти</span>' :
+                ' <span class="load-over">⚠ забагато вантажу</span>');
+
+    if (closeBtn) {
+        closeBtn.disabled = emergencyUnloadOpen && !fits;
+        closeBtn.textContent = emergencyUnloadOpen ? "🎒 Взяти рюкзак і йти пішки" : "Закрити";
+    }
+}
+
+function tryRecoverStrandedCar() {
+    if (!strandedCar) return;
+    if (distanceToStrandedCar() > STRANDED_CAR_INTERACTION_RADIUS) {
+        showGameMessage("Підійди ближче до машини.", "error");
+        return;
+    }
+    if (carFuelState.liters <= 0) {
+        showGameMessage("Спочатку заправ машину пальним.", "error");
+        return;
+    }
+    strandedCar = null;
+    saveStrandedCar();
+    if (strandedCarMarker) {
+        map.removeLayer(strandedCarMarker);
+        strandedCarMarker = null;
+    }
+    carryState.active = "car";
+    saveCarryState();
+    document.getElementById("emergencyUnloadModal")?.classList.remove("show");
+    updateInventoryUI();
+    renderCarrySystems();
+    showGameMessage("🚗 Машина знову готова до руху.", "success");
+}
+
+/* ===== CAR FUEL ===== */
+const CAR_FUEL_STORAGE_KEY = "geoGameCarFuelV1";
+const CAR_TANK_CAPACITY_L = 50;
+const CAR_CONSUMPTION_L_PER_100KM = 10;
+
+let carFuelState = loadCarFuelState();
+let lastFuelGpsPoint = null;
+let fuelEmptyWarned = false;
+
+function loadCarFuelState() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(CAR_FUEL_STORAGE_KEY) || "{}");
+        return { liters: Math.max(0, Math.min(CAR_TANK_CAPACITY_L, Number(saved.liters) || 0)) };
+    } catch (_) {
+        return { liters:0 };
+    }
+}
+function saveCarFuelState() {
+    localStorage.setItem(CAR_FUEL_STORAGE_KEY, JSON.stringify(carFuelState));
+}
+function isFuelItem(item) {
+    return !!item && (
+        String(item.id || "").toLowerCase() === "fuel" ||
+        String(item.name || "").trim().toLowerCase() === "пальне"
+    );
+}
+function refuelCarFromInventoryIndex(index) {
+    const item = inventory[index];
+    if (!isFuelItem(item)) return;
+    if (!carryState.owned.includes("car")) {
+        showGameMessage("Спочатку потрібно знайти машину.", "error");
+        return;
+    }
+    if (carFuelState.liters >= CAR_TANK_CAPACITY_L - 0.01) {
+        showGameMessage("Бак уже повний.", "error");
+        return;
+    }
+    const liters = Number(item.fuelLiters || 5);
+    const added = Math.min(liters, CAR_TANK_CAPACITY_L - carFuelState.liters);
+    carFuelState.liters += added;
+    inventory.splice(index, 1);
+    saveCarFuelState();
+    saveInventory();
+    updateInventoryUI();
+    renderCarrySystems();
+    if (strandedCar && distanceToStrandedCar() <= STRANDED_CAR_INTERACTION_RADIUS) {
+        renderEmergencyUnload();
+    }
+    closeInventoryItemActions();
+    showGameMessage(`⛽ Заправлено ${added.toFixed(1)} л`, "success");
+}
+function consumeCarFuelByGps(position, speedKmh) {
+    if (carryState.active !== "car") {
+        lastFuelGpsPoint = null;
+        return;
+    }
+    const lat = Number(position.coords.latitude);
+    const lng = Number(position.coords.longitude);
+    const acc = Number(position.coords.accuracy);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || acc > 50) return;
+
+    if (carFuelState.liters <= 0) {
+        if (speedKmh > 3 && !fuelEmptyWarned) {
+            showGameMessage("⛽ У машині немає пального. Заправ її з інвентарю.", "error");
+            fuelEmptyWarned = true;
+        }
+        lastFuelGpsPoint = {lat,lng};
+        return;
+    }
+    fuelEmptyWarned = false;
+    if (!lastFuelGpsPoint) {
+        lastFuelGpsPoint = {lat,lng};
+        return;
+    }
+    const previousFuelPoint = {...lastFuelGpsPoint};
+    const meters = getDistance(previousFuelPoint.lat, previousFuelPoint.lng, lat, lng);
+    lastFuelGpsPoint = {lat,lng};
+    if (!Number.isFinite(meters) || meters < 3 || meters > 1000 || speedKmh < 3) return;
+
+    const litersUsed = (meters / 100000) * CAR_CONSUMPTION_L_PER_100KM;
+    const fuelBefore = carFuelState.liters;
+    carFuelState.liters = Math.max(0, carFuelState.liters - litersUsed);
+
+    if (fuelBefore > 0 && carFuelState.liters <= 0 && litersUsed > 0) {
+        // Approximate the point along the latest GPS segment where the tank became empty.
+        const fraction = Math.max(0, Math.min(1, fuelBefore / litersUsed));
+        const stopLat = previousFuelPoint.lat + (lat - previousFuelPoint.lat) * fraction;
+        const stopLng = previousFuelPoint.lng + (lng - previousFuelPoint.lng) * fraction;
+        strandCarAt(stopLat, stopLng);
+    }
+
+    saveCarFuelState();
+    renderCarrySystems();
+}
+
+const INVENTORY_STORAGE_KEY = "geoGameInventory";
+
+const STARTER_AXE = {
+    id: "scout_axe", name: "Сокира розвідника", icon: "🪓",
+    weight: 2.0, volume: 0, external: true
+};
+
+const FIREWOOD_BUNDLE = {
+    id: "firewood_bundle", name: "В'язанка дров", icon: "🪵",
+    weight: 10.0, volume: 15.0, external: false
+};
+
+/* Building search loot.
+   Each successful search has a 50% chance to find ONE random item:
+   water or food. The other 50% yields nothing. */
+const BUILDING_LOOT_CHANCE = 0.50;
+
+const BUILDING_LOOT_TABLE = [
+    {
+        id: "water_bottle",
+        name: "Вода",
+        icon: "💧",
+        weight: 1.0,
+        volume: 1.0,
+        external: false
+    },
+    {
+        id: "canned_food",
+        name: "Їжа",
+        icon: "🥫",
+        weight: 0.5,
+        volume: 0.5,
+        external: false
+    }
+];
+
+
+/* ===== Loot by OSM building type ===== */
+const PARACETAMOL_ITEM = {
+    id: "paracetamol",
+    name: "Парацетамол",
+    icon: "💊",
+    weight: 0.1,
+    volume: 0.1,
+    external: false
+};
+
+const VEHICLE_ITEM = {
+    id: "carry_car", name: "Машина", icon: "🚗",
+    carrySystemId: "car", specialCarrySystem: true
+};
+
+
+const BICYCLE_ITEM = {
+    id: "carry_bicycle", name: "Велосипед", icon: "🚲",
+    carrySystemId: "bicycle", specialCarrySystem: true
+};
+
+const CART_ITEM = {
+    id: "carry_cart", name: "Тачка", icon: "🛒",
+    carrySystemId: "cart", specialCarrySystem: true
+};
+
+const FUEL_ITEM = {
+    id: "fuel",
+    name: "Пальне",
+    icon: "⛽",
+    weight: 5.0,
+    volume: 5.0,
+    external: false,
+    fuelLiters: 5
+};
+
+function generateLootForBuilding(record) {
+    const info = getBuildingDisplayInfo(record);
+
+    // Medical: 50% chance for paracetamol.
+    if (info.type === "medical") {
+        return Math.random() < 0.50
+            ? [{ ...PARACETAMOL_ITEM, quantity: 1 }]
+            : [];
+    }
+
+    // Grocery/shop: 50% chance to find ONE random food resource.
+    if (info.type === "shop") {
+        if (Math.random() >= 0.50) return [];
+        const template =
+            BUILDING_LOOT_TABLE[
+                Math.floor(Math.random() * BUILDING_LOOT_TABLE.length)
+            ];
+        return [{ ...template, quantity: 1 }];
+    }
+
+
+    // Shopping center / hypermarket: guaranteed bicycle or cart.
+    if (info.type === "mall") {
+        const template = Math.random() < 0.50 ? BICYCLE_ITEM : CART_ITEM;
+        return [{ ...template, quantity: 1 }];
+    }
+
+    // Service station: guaranteed vehicle.
+    if (info.type === "service") {
+        return [{ ...VEHICLE_ITEM, quantity: 1 }];
+    }
+
+    // Fuel station: guaranteed fuel.
+    if (info.type === "fuel") {
+        return [{ ...FUEL_ITEM, quantity: 1 }];
+    }
+
+    // Ordinary buildings keep the previous generic 50% water/food rule.
+    if (Math.random() < BUILDING_LOOT_CHANCE) {
+        const template =
+            BUILDING_LOOT_TABLE[
+                Math.floor(Math.random() * BUILDING_LOOT_TABLE.length)
+            ];
+        return [{ ...template, quantity: 1 }];
+    }
+
+    return [];
+}
+
+
+let inventory = [];
+
+function loadInventory() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
+        inventory = Array.isArray(saved) ? saved : [];
+    } catch (_) { inventory = []; }
+    if (!inventory.some(item => item.id === STARTER_AXE.id)) {
+        inventory.unshift({...STARTER_AXE});
+        saveInventory();
+    }
+}
+
+function saveInventory() {
+    localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(inventory));
+}
+
+function getInventoryWeight() {
+    return inventory.reduce((sum, item) => sum + Number(item.weight || 0), 0);
+}
+
+function getInventoryVolume() {
+    return inventory.reduce((sum, item) => sum + (item.external ? 0 : Number(item.volume || 0)), 0);
+}
+
+function canAddItem(weight, volume) {
+    const w = Number(weight), v = Number(volume);
+    if (!Number.isFinite(w) || !Number.isFinite(v) || w < 0 || v < 0) return false;
+    const system = getActiveCarrySystem();
+    return getInventoryWeight() + w <= system.maxWeight &&
+           getInventoryVolume() + v <= system.maxVolume;
+}
+
+function addItem(item) {
+    const volume = item.external ? 0 : Number(item.volume || 0);
+    if (!canAddItem(item.weight, volume)) return false;
+    inventory.push(item);
+    saveInventory();
+    updateInventoryUI();
+    return true;
+}
+
+function formatLiters(value) {
+    return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+
+const BACKPACK_GRID_SLOTS = 24;
+
+
+function isWaterItem(item) {
+    return !!item && (
+        item.id === "water" ||
+        String(item.name || "").trim().toLowerCase() === "вода"
+    );
+}
+
+function drinkWaterFromInventoryIndex(index) {
+    const item = inventory[index];
+    if (!isWaterItem(item)) return;
+
+    updateSurvivalThirst(survivalCurrentSpeedKmh);
+
+    if (survivalState.thirst >= 99.9) {
+        showGameMessage("Ти не хочеш пити.", "error");
+        return;
+    }
+
+    inventory.splice(index, 1);
+    survivalState.thirst = Math.min(100, survivalState.thirst + 35);
+    survivalState.lastUpdate = Date.now();
+
+    saveInventory();
+    saveSurvivalState();
+    updateInventoryUI();
+    renderSurvivalHUD();
+    closeInventoryItemActions();
+
+    showGameMessage("💧 Ти випив воду.", "success");
+}
+
+function openInventoryItemActions(item, index) {
+    closeInventoryItemActions();
+
+    if (!isWaterItem(item) && !isFoodItem(item) && !isFuelItem(item)) return false;
+
+    const menu = document.createElement("div");
+    menu.id = "inventoryItemActions";
+    menu.className = "inventory-item-actions";
+
+    const title = document.createElement("div");
+    title.className = "inventory-action-title";
+    title.textContent = `${item.icon || "💧"} ${item.name}`;
+
+    const use = document.createElement("button");
+    use.type = "button";
+
+    if (isWaterItem(item)) {
+        use.textContent = "💧 Випити";
+        use.addEventListener("click", (event) => {
+            event.stopPropagation();
+            drinkWaterFromInventoryIndex(index);
+        });
+    } else if (isFoodItem(item)) {
+        use.textContent = "🥫 З'їсти";
+        use.addEventListener("click", (event) => {
+            event.stopPropagation();
+            eatFoodFromInventoryIndex(index);
+        });
+    } else if (isFuelItem(item)) {
+        use.textContent = "⛽ Заправити машину";
+        use.addEventListener("click", (event) => {
+            event.stopPropagation();
+            refuelCarFromInventoryIndex(index);
+        });
+    }
+
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.textContent = "Скасувати";
+    cancel.addEventListener("click", (event) => {
+        event.stopPropagation();
+        closeInventoryItemActions();
+    });
+
+    menu.append(title, use, cancel);
+    document.body.appendChild(menu);
+    return true;
+}
+
+function closeInventoryItemActions() {
+    const menu = document.getElementById("inventoryItemActions");
+    if (menu) menu.remove();
+}
+
+function renderBackpackGrid() {
+    const container =
+        document.getElementById("inventoryItems") ||
+        document.querySelector("#inventoryModal .inventory-items") ||
+        document.querySelector("#backpackModal .inventory-items") ||
+        document.querySelector(".inventory-modal .inventory-items");
+
+    if (!container || !Array.isArray(inventory)) return;
+
+    container.innerHTML = "";
+
+    /* Group identical objects into one visual cell with ×quantity. */
+    const grouped = [];
+    const byKey = new Map();
+
+    inventory.forEach((item) => {
+        const key = item.id || item.name;
+        if (!byKey.has(key)) {
+            const entry = { ...item, quantity: 0 };
+            byKey.set(key, entry);
+            grouped.push(entry);
+        }
+        byKey.get(key).quantity += 1;
+    });
+
+    const slots = Math.max(BACKPACK_GRID_SLOTS, grouped.length);
+
+    for (let i = 0; i < slots; i++) {
+        const item = grouped[i];
+        const cell = document.createElement("div");
+        cell.className = "backpack-grid-cell" + (item ? "" : " empty");
+
+        if (item) {
+            cell.innerHTML = `
+                ${item.external ? '<div class="backpack-external">ЗОВНІ</div>' : ""}
+                <div class="backpack-icon">${item.icon || "📦"}</div>
+                <div class="backpack-name">${item.name}</div>
+                <div class="backpack-count">×${item.quantity}</div>
+            `;
+            cell.title =
+                `${item.name} — ${Number(item.weight || 0).toFixed(1)} кг / ` +
+                `${Number(item.volume || 0).toFixed(1)} л`;
+        } else {
+            cell.innerHTML = '<div style="opacity:.30;font-size:24px;">＋</div>';
+        }
+
+        cell.addEventListener("click", () => {
+            const lootModal = document.getElementById("buildingLootModal");
+            if (lootModal && lootModal.classList.contains("show") && activeBuildingLootRecord) {
+                moveInventoryCellToOpenBuilding(index);
+            }
+        });
+        cell.addEventListener("click", (event) => {
+            if (typeof item !== "undefined" && (isWaterItem(item) || isFoodItem(item) || isFuelItem(item))) {
+                event.stopPropagation();
+                const idx = inventory.findIndex(inv =>
+                (isWaterItem(item) && isWaterItem(inv)) ||
+                (isFoodItem(item) && isFoodItem(inv)) ||
+                (isFuelItem(item) && isFuelItem(inv))
+            );
+                if (idx >= 0) openInventoryItemActions(item, idx);
+            }
+        });
+        container.appendChild(cell);
+    }
+}
+
+
+function updateInventoryUI() {
+    const weight = getInventoryWeight();
+    const volume = getInventoryVolume();
+    const system = getActiveCarrySystem();
+    const status = `${system.icon} ${system.name}: ${weight.toFixed(1)} / ${system.maxWeight.toFixed(1)} кг (${formatLiters(volume)} / ${formatLiters(system.maxVolume)} л)`;
+    const inventoryStatusEl = document.getElementById("inventoryStatus");
+    if (inventoryStatusEl) inventoryStatusEl.textContent = status;
+    document.getElementById("inventorySummary").textContent = status;
+    document.getElementById("weightText").textContent = `${weight.toFixed(1)} / ${system.maxWeight.toFixed(1)} кг`;
+    document.getElementById("volumeText").textContent = `${formatLiters(volume)} / ${formatLiters(system.maxVolume)} л`;
+    document.getElementById("weightFill").style.width = `${Math.min(100, weight / system.maxWeight * 100)}%`;
+    document.getElementById("volumeFill").style.width = `${Math.min(100, volume / system.maxVolume * 100)}%`;
+    const list = document.getElementById("inventoryItems");
+    list.innerHTML = "";
+    inventory.forEach(item => {
+        const row = document.createElement("div"); row.className = "inventory-item";
+        const icon = document.createElement("div"); icon.className = "inventory-icon"; icon.textContent = item.icon || "📦";
+        const info = document.createElement("div");
+        const name = document.createElement("div"); name.className = "inventory-item-name"; name.textContent = item.name;
+        const stats = document.createElement("div"); stats.className = "inventory-item-stats";
+        stats.textContent = `${Number(item.weight).toFixed(1)} кг / ${formatLiters(item.external ? 0 : Number(item.volume || 0))} л${item.external ? " · зовнішнє кріплення" : ""}`;
+        info.append(name, stats); row.append(icon, info); list.appendChild(row);
+    });
+
+    renderBackpackGrid();
+    renderCarrySystems();
+}
+
+document.getElementById("inventoryButton").addEventListener("click", () => {
+    updateInventoryUI();
+    document.getElementById("inventoryModal").classList.remove("hidden");
+});
+document.getElementById("closeInventory").addEventListener("click", () => {
+    document.getElementById("inventoryModal").classList.add("hidden");
+});
+document.getElementById("inventoryModal").addEventListener("click", e => {
+    if (e.target.id === "inventoryModal") e.currentTarget.classList.add("hidden");
+});
+
+
+
+/* =========================================================
+   PROFILE / WALKED DISTANCE
+========================================================= */
+const DISTANCE_STORAGE_KEY = "geoGameDistanceStatsV1";
+let distanceStats = loadDistanceStats();
+let lastDistancePosition = null;
+
+function localDateKey(date = new Date()) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
+function loadDistanceStats() {
+    const today = localDateKey();
+    try {
+        const saved = JSON.parse(
+            localStorage.getItem(DISTANCE_STORAGE_KEY) || "{}"
+        );
+
+        return {
+            totalMeters: Math.max(0, Number(saved.totalMeters) || 0),
+            todayMeters:
+                saved.todayKey === today
+                    ? Math.max(0, Number(saved.todayMeters) || 0)
+                    : 0,
+            todayKey: today
+        };
+    } catch (_) {
+        return {
+            totalMeters: 0,
+            todayMeters: 0,
+            todayKey: today
+        };
+    }
+}
+
+function saveDistanceStats() {
+    localStorage.setItem(
+        DISTANCE_STORAGE_KEY,
+        JSON.stringify(distanceStats)
+    );
+}
+
+function ensureDistanceDay() {
+    const today = localDateKey();
+    if (distanceStats.todayKey !== today) {
+        distanceStats.todayKey = today;
+        distanceStats.todayMeters = 0;
+        saveDistanceStats();
+    }
+}
+
+function updateProfileUI() {
+    ensureDistanceDay();
+
+    const todayEl = document.getElementById("todayDistance");
+    const totalEl = document.getElementById("totalDistance");
+
+    if (todayEl) {
+        todayEl.textContent =
+            (distanceStats.todayMeters / 1000).toFixed(2) + " км";
+    }
+
+    if (totalEl) {
+        totalEl.textContent =
+            (distanceStats.totalMeters / 1000).toFixed(2) + " км";
+    }
+}
+
+function trackWalkedDistance(position) {
+    ensureDistanceDay();
+
+    const lat = Number(position.coords.latitude);
+    const lng = Number(position.coords.longitude);
+    const accuracy = Number(position.coords.accuracy);
+    const timestamp = Number(position.timestamp) || Date.now();
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+    const point = { lat, lng, accuracy, timestamp };
+
+    /*
+       Very inaccurate fixes are not used for distance accumulation.
+       This prevents large jumps when GPS is still searching.
+    */
+    if (Number.isFinite(accuracy) && accuracy > 50) {
+        return;
+    }
+
+    if (!lastDistancePosition) {
+        lastDistancePosition = point;
+        return;
+    }
+
+    const meters = getDistance(
+        lastDistancePosition.lat,
+        lastDistancePosition.lng,
+        lat,
+        lng
+    );
+
+    const seconds =
+        Math.max(
+            0.001,
+            (timestamp - lastDistancePosition.timestamp) / 1000
+        );
+
+    const metersPerSecond = meters / seconds;
+
+    /*
+       Ignore GPS jitter below 3 m and obviously impossible jumps.
+       The upper limit still allows brisk walking/running/cycling.
+    */
+    if (
+        meters >= 3 &&
+        meters <= 250 &&
+        metersPerSecond <= 15
+    ) {
+        distanceStats.totalMeters += meters;
+        distanceStats.todayMeters += meters;
+        saveDistanceStats();
+        updateProfileUI();
+    }
+
+    lastDistancePosition = point;
+}
+
+document.getElementById("profileButton").addEventListener("click", () => {
+    updateProfileUI();
+    document.getElementById("profileModal").classList.remove("hidden");
+});
+
+document.getElementById("closeProfile").addEventListener("click", () => {
+    document.getElementById("profileModal").classList.add("hidden");
+});
+
+document.getElementById("profileModal").addEventListener("click", (event) => {
+    if (event.target.id === "profileModal") {
+        event.currentTarget.classList.add("hidden");
+    }
+});
+
+updateProfileUI();
+
+
+
+/* =========================================================
+   PERSISTENT BUILDING CONTAINERS
+   Once searched, generated loot never respawns.
+   The player may later leave their own items in the building.
+========================================================= */
+
+function getBuildingState(record) {
+    if (!record || !record.id) return null;
+    const state = buildingStates[record.id] || {};
+    if (!Array.isArray(state.loot)) state.loot = [];
+    if (!Array.isArray(state.storedItems)) state.storedItems = [];
+    buildingStates[record.id] = state;
+    return state;
+}
+
+function getBuildingContainerItems(record) {
+    const state = getBuildingState(record);
+    if (!state) return [];
+    return [
+        ...state.loot.map(item => ({...item, source:"loot"})),
+        ...state.storedItems.map(item => ({...item, source:"stored"}))
+    ];
+}
+
+
+function moveInventoryCellToOpenBuilding(inventoryIndex) {
+    if (!activeBuildingLootRecord) {
+        showGameMessage("Спочатку відкрийте будівлю.", "error");
+        return;
+    }
+    putInventoryItemInBuilding(activeBuildingLootRecord, inventoryIndex);
+}
+
+function putInventoryItemInBuilding(record, inventoryIndex) {
+    if (!record || !currentPosition) return;
+
+    const distance = distanceToBuildingMeters(
+        currentPosition.lat,
+        currentPosition.lng,
+        record.ring
+    );
+
+    if (distance > BUILDING_INTERACTION_RADIUS) {
+        showGameMessage("Потрібно бути ближче до будівлі.", "error");
+        return;
+    }
+
+    const item = inventory[inventoryIndex];
+    if (!item) return;
+
+    const state = getBuildingState(record);
+    const existing = state.storedItems.find(stack =>
+        stack.id === item.id &&
+        !!stack.external === !!item.external
+    );
+
+    if (existing) {
+        existing.quantity = Number(existing.quantity || 1) + 1;
+    } else {
+        state.storedItems.push({
+            id:item.id,
+            name:item.name,
+            icon:item.icon || "📦",
+            weight:Number(item.weight || 0),
+            volume:Number(item.volume || 0),
+            external:!!item.external,
+            quantity:1
+        });
+    }
+
+    inventory.splice(inventoryIndex, 1);
+    saveInventory();
+    saveBuildingStates();
+    updateInventoryUI();
+    renderBuildingLootModal();
+    showGameMessage(`${item.icon || "📦"} ${item.name} переміщено`, "success");
+}
+
+function takeStoredBuildingItem(record, storedIndex) {
+    const state = getBuildingState(record);
+    if (!state) return;
+    const stack = state.storedItems[storedIndex];
+    if (!stack) return;
+
+    const volume = stack.external ? 0 : Number(stack.volume || 0);
+    if (!canAddItem(Number(stack.weight || 0), volume)) {
+        showGameMessage("Немає місця у поточному сховищі!", "error");
+        return;
+    }
+
+    inventory.push({
+        id:stack.id,
+        name:stack.name,
+        icon:stack.icon || "📦",
+        weight:Number(stack.weight || 0),
+        volume:Number(stack.volume || 0),
+        external:!!stack.external,
+        uid:Date.now()
+    });
+
+    stack.quantity = Number(stack.quantity || 1) - 1;
+    if (stack.quantity <= 0) state.storedItems.splice(storedIndex, 1);
+
+    saveInventory();
+    saveBuildingStates();
+    updateInventoryUI();
+    renderBuildingLootModal();
+}
+
+
+
+/* =========================================================
+   BASE STORAGE INVENTORY
+========================================================= */
+const BASE_STORAGE_KEY = "geoGameBaseStorage";
+const BASE_STORAGE_MAX_WEIGHT = 50.0;
+const BASE_STORAGE_SLOTS = 24;
+let baseStorage = [];
+
+function loadBaseStorage() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(BASE_STORAGE_KEY) || "[]");
+        baseStorage = Array.isArray(saved) ? saved.filter(stack => stack && stack.id && Number(stack.quantity) > 0) : [];
+    } catch (_) { baseStorage = []; }
+}
+
+function saveBaseStorage() {
+    localStorage.setItem(BASE_STORAGE_KEY, JSON.stringify(baseStorage));
+}
+
+function getBaseStorageWeight() {
+    return baseStorage.reduce((sum, stack) => sum + Number(stack.weight || 0) * Number(stack.quantity || 0), 0);
+}
+
+function setStorageWarning(message = "") {
+    const el = document.getElementById("storageWarning");
+    if (el) el.textContent = message;
+}
+
+function moveInventoryItemToStorage(index) {
+    const item = inventory[index];
+    if (!item) return;
+    if (getBaseStorageWeight() + Number(item.weight || 0) > BASE_STORAGE_MAX_WEIGHT) {
+        setStorageWarning("Склад Бази заповнений!");
+        return;
+    }
+    let stack = baseStorage.find(s => s.id === item.id);
+    if (!stack) {
+        if (baseStorage.length >= BASE_STORAGE_SLOTS) {
+            setStorageWarning("Склад Бази заповнений!");
+            return;
+        }
+        stack = {
+            id:item.id, name:item.name, icon:item.icon || "📦",
+            weight:Number(item.weight || 0), volume:Number(item.volume || 0),
+            external:!!item.external, quantity:0
+        };
+        baseStorage.push(stack);
+    }
+    stack.quantity += 1;
+    inventory.splice(index, 1);
+    saveInventory(); saveBaseStorage();
+    updateInventoryUI(); renderBaseStorage();
+}
+
+function moveStorageItemToInventory(stackIndex) {
+    const stack = baseStorage[stackIndex];
+    if (!stack || stack.quantity <= 0) return;
+    const volume = stack.external ? 0 : Number(stack.volume || 0);
+    if (!canAddItem(Number(stack.weight || 0), volume)) {
+        setStorageWarning("Немає місця в рюкзаку!");
+        return;
+    }
+    inventory.push({
+        id:stack.id, name:stack.name, icon:stack.icon,
+        weight:Number(stack.weight || 0), volume:Number(stack.volume || 0),
+        external:!!stack.external, uid:Date.now()
+    });
+    stack.quantity -= 1;
+    if (stack.quantity <= 0) baseStorage.splice(stackIndex, 1);
+    saveInventory(); saveBaseStorage();
+    updateInventoryUI(); renderBaseStorage();
+}
+
+function renderBaseStorage() {
+    const modal = document.getElementById("baseStorageModal");
+    if (!modal) return;
+    const weight = getBaseStorageWeight();
+    document.getElementById("storageWeightText").textContent = `Сховище: ${weight.toFixed(1)} / ${BASE_STORAGE_MAX_WEIGHT.toFixed(1)} кг`;
+    document.getElementById("storageWeightFill").style.width = `${Math.min(100, weight / BASE_STORAGE_MAX_WEIGHT * 100)}%`;
+    const activeCarry = getActiveCarrySystem();
+    document.getElementById("storageBackpackSummary").textContent = `${activeCarry.icon} ${activeCarry.name}: ${getInventoryWeight().toFixed(1)} / ${activeCarry.maxWeight.toFixed(1)} кг (${formatLiters(getInventoryVolume())} / ${formatLiters(activeCarry.maxVolume)} л)`;
+
+    const grid = document.getElementById("storageGrid");
+    grid.innerHTML = "";
+    for (let i=0; i<BASE_STORAGE_SLOTS; i++) {
+        const stack = baseStorage[i];
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "storage-cell" + (stack ? "" : " empty");
+        if (stack) {
+            cell.innerHTML = `<span class="item-icon">${stack.icon || "📦"}</span><span class="item-name"></span><span class="item-count">×${stack.quantity}</span>`;
+            cell.querySelector(".item-name").textContent = stack.name;
+            cell.title = `${stack.name}: ${Number(stack.weight).toFixed(1)} кг × ${stack.quantity}`;
+            cell.addEventListener("click", () => moveStorageItemToInventory(i));
+        } else {
+            cell.disabled = true;
+            cell.setAttribute("aria-label", "Порожня комірка");
+        }
+        grid.appendChild(cell);
+    }
+
+    const list = document.getElementById("storageBackpackList");
+    list.innerHTML = "";
+    if (!inventory.length) {
+        const empty = document.createElement("div"); empty.className="storage-empty-text"; empty.textContent="Рюкзак порожній"; list.appendChild(empty);
+    } else {
+        inventory.forEach((item, index) => {
+            const btn = document.createElement("button"); btn.type="button"; btn.className="storage-backpack-item";
+            const icon=document.createElement("span"); icon.className="bp-icon"; icon.textContent=item.icon || "📦";
+            const info=document.createElement("span");
+            const name=document.createElement("div"); name.className="bp-name"; name.textContent=item.name;
+            const stats=document.createElement("div"); stats.className="bp-stats"; stats.textContent=`${Number(item.weight || 0).toFixed(1)} кг · ${formatLiters(item.external ? 0 : Number(item.volume || 0))} л`;
+            info.append(name,stats); btn.append(icon,info);
+            btn.addEventListener("click", () => moveInventoryItemToStorage(index));
+            list.appendChild(btn);
+        });
+    }
+}
+
+loadBaseStorage();
+
+document.getElementById("closeBaseStorage").addEventListener("click", () => {
+    document.getElementById("baseStorageModal").classList.add("hidden");
+});
+document.getElementById("baseStorageModal").addEventListener("click", e => {
+    if (e.target.id === "baseStorageModal") e.currentTarget.classList.add("hidden");
+});
+
+
+let gameMessageTimer = null;
+function showGameMessage(message, type = "") {
+    const box = document.getElementById("gameMessage");
+    box.textContent = message;
+    box.className = type || "";
+    clearTimeout(gameMessageTimer);
+    gameMessageTimer = setTimeout(() => box.classList.add("hidden"), 3000);
+}
+
+function hasScoutAxe() {
+    return inventory.some(item => item.id === STARTER_AXE.id);
+}
+
+function chopWood() {
+    if (!canChopWoodHere()) {
+        showGameMessage("🌲 Тут немає позначених дерев. Підійди ближче до дерева, алеї або лісу.", "error");
+        return;
+    }
+
+    if (!hasScoutAxe()) {
+        showGameMessage("Для рубання дров потрібна Сокира розвідника!", "error");
+        return;
+    }
+
+    if (!canAddItem(FIREWOOD_BUNDLE.weight, FIREWOOD_BUNDLE.volume)) {
+        showGameMessage("Немає місця в рюкзаку! Спробуйте вивантажити ресурси", "error");
+        return;
+    }
+
+    addItem({...FIREWOOD_BUNDLE, uid: Date.now()});
+    showGameMessage("+1 В'язанка дров (10.0 кг / 15 л)", "success");
+}
+
+document.getElementById("chopWoodButton").addEventListener("click", chopWood);
+
+loadInventory();
+updateInventoryUI();
+
+/* =========================================================
+   STORAGE
+========================================================= */
+
+const LOGIN_STORAGE_KEY =
+    "geoGameLoggedIn";
+
+const EXPLORED_STORAGE_KEY =
+    "geoGameExploredZones";
+
+const FLASHLIGHT_STORAGE_KEY =
+    "geoGameFlashlight";
+
+const BIOME_STORAGE_KEY =
+    "geoGameBiome";
+
+
+/* =========================================================
+   GAME STATE
+========================================================= */
+
+let map = null;
+
+let playerMarker = null;
+
+let accuracyCircle = null;
+
+let firstGPSPosition = true;
+
+let previousPosition = null;
+
+let currentPosition = null;
+
+let watchId = null;
+
+
+/*
+    Previously explored areas.
+
+    Each object:
+
+    {
+        lat: number,
+        lng: number,
+        radius: number
+    }
+*/
+
+let exploredZones = [];
+
+
+/*
+    Biome MVP.
+
+    "city"
+    "field"
+*/
+
+let currentBiome =
+    localStorage.getItem(
+        BIOME_STORAGE_KEY
+    ) || "city";
+
+/*
+    Automatic biome detection state.
+    We query OpenStreetMap via Overpass only after
+    the player moves far enough, not on every GPS tick.
+*/
+let lastBiomeCheckPosition = null;
+let biomeCheckInProgress = false;
+const BIOME_CHECK_DISTANCE = 75;
+const BIOME_SEARCH_RADIUS = 120;
+
+
+/* =========================================================
+   REAL OSM BUILDINGS / INTERACTION
+========================================================= */
+const BUILDING_STATE_STORAGE_KEY = "geoGameBuildingStatesV1";
+const BASE_BACKUP_STORAGE_KEY = "geoGameMainBaseV1";
+const BUILDING_CACHE_STORAGE_KEY = "geoGameBuildingGeometryCacheV1";
+const BUILDING_CACHE_MAX = 1800;
+const BUILDING_INTERACTION_RADIUS = 20;
+const BASE_PROTECTION_RADIUS = 200;
+let buildingLayer = null;
+let buildingStates = {};
+let buildingLoadTimer = null;
+let buildingRequestController = null;
+let openBuildingRecord = null;
+
+/*
+    Persistent building cache. Records live here independently from
+    Overpass requests and UI modals, so existing polygons are never
+    removed merely because a new request failed or a window closed.
+*/
+const buildingMemoryCache = new Map();
+
+function loadBuildingGeometryCache() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(BUILDING_CACHE_STORAGE_KEY) || "[]");
+        if (!Array.isArray(saved)) return;
+        saved.forEach(item => {
+            if (item && item.id && Array.isArray(item.ring) && item.ring.length >= 3) {
+                buildingMemoryCache.set(item.id, { id:item.id, ring:item.ring, tags:item.tags || {}, poi:item.poi || null });
+            }
+        });
+    } catch (error) {
+        console.warn("Не вдалося прочитати кеш будівель:", error);
+    }
+}
+
+function saveBuildingGeometryCache() {
+    try {
+        const records = Array.from(buildingMemoryCache.values())
+            .slice(-BUILDING_CACHE_MAX)
+            .map(item => ({ id:item.id, ring:item.ring, tags:item.tags || {}, poi:item.poi || null }));
+        localStorage.setItem(BUILDING_CACHE_STORAGE_KEY, JSON.stringify(records));
+    } catch (error) {
+        console.warn("Не вдалося зберегти кеш будівель:", error);
+    }
+}
+
+loadBuildingGeometryCache();
+
+try {
+    buildingStates = JSON.parse(localStorage.getItem(BUILDING_STATE_STORAGE_KEY) || "{}") || {};
+} catch (_) {
+    buildingStates = {};
+}
+
+function saveBuildingStates() {
+    localStorage.setItem(BUILDING_STATE_STORAGE_KEY, JSON.stringify(buildingStates));
+}
+
+
+let flashlightEnabled =
+    localStorage.getItem(
+        FLASHLIGHT_STORAGE_KEY
+    ) === "true";
+
+
+/*
+    Prevent saving GPS zones
+    every few milliseconds.
+*/
+
+let lastSavedZone = null;
+
+
+/* =========================================================
+   DOM
+========================================================= */
+
+const loginScreen =
+    document.getElementById(
+        "loginScreen"
+    );
+
+const loginButton =
+    document.getElementById(
+        "googleLogin"
+    );
+
+const gameUI =
+    document.getElementById(
+        "gameUI"
+    );
+
+const speedElement =
+    document.getElementById(
+        "speed"
+    );
+
+const gpsStatus =
+    document.getElementById(
+        "gpsStatus"
+    );
+
+const flashlightButton =
+    document.getElementById(
+        "flashlightButton"
+    );
+
+const biomeButton =
+    document.getElementById(
+        "biomeButton"
+    );
+
+const timeMode =
+    document.getElementById(
+        "timeMode"
+    );
+
+const visionInfo =
+    document.getElementById(
+        "visionInfo"
+    );
+
+const centerButton =
+    document.getElementById(
+        "centerButton"
+    );
+
+
+/* =========================================================
+   FOG CANVAS
+========================================================= */
+
+const fogCanvas =
+    document.getElementById(
+        "fogCanvas"
+    );
+
+const fogContext =
+    fogCanvas.getContext(
+        "2d"
+    );
+
+
+/* =========================================================
+   LOGIN
+========================================================= */
+
+function checkLogin() {
+
+    const loggedIn =
+        localStorage.getItem(
+            LOGIN_STORAGE_KEY
+        );
+
+    if (loggedIn === "true") {
+
+        loginScreen.classList.add(
+            "hidden"
+        );
+
+        startGame();
+
+    }
+
+}
+
+
+loginButton.addEventListener(
+    "click",
+    function () {
+
+        localStorage.setItem(
+            LOGIN_STORAGE_KEY,
+            "true"
+        );
+
+        loginScreen.classList.add(
+            "hidden"
+        );
+
+        startGame();
+
+    }
+);
+
+
+/* =========================================================
+   START GAME
+========================================================= */
+
+function startGame() {
+
+    gameUI.classList.remove(
+        "hidden"
+    );
+
+    gpsStatus.classList.remove(
+        "hidden"
+    );
+
+    centerButton.classList.remove(
+        "hidden"
+    );
+
+    loadExploredZones();
+
+    updateHUD();
+
+    initMap();
+
+    resizeFogCanvas();
+
+    drawFog();
+
+    startGPS();
+
+}
+
+
+/* =========================================================
+   MAP
+========================================================= */
+
+function initMap() {
+
+    if (map) {
+        return;
+    }
+
+
+    map = L.map(
+        "map",
+        {
+            zoomControl: true
+        }
+    ).setView(
+        [50.4501, 30.5234],
+        16
+    );
+
+
+    L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+
+            maxZoom: 19,
+
+            attribution:
+                "&copy; OpenStreetMap contributors"
+
+        }
+    ).addTo(map);
+
+
+
+    if (!map.getPane("buildingsPane")) {
+        map.createPane("buildingsPane");
+        map.getPane("buildingsPane").style.zIndex = "460";
+        map.getPane("buildingsPane").style.pointerEvents = "auto";
+    }
+    buildingLayer = L.featureGroup().addTo(map);
+    renderCachedBuildings();
+    renderSavedBaseBackup();
+
+    /* Load real OSM building polygons for the visible map area. */
+    map.on("moveend zoomend", scheduleBuildingLoad);
+    scheduleBuildingLoad();
+
+    /*
+        Fog must redraw whenever
+        map position or zoom changes.
+    */
+
+    map.on(
+        "move zoom resize",
+        drawFog
+    );
+
+
+    map.on(
+        "moveend zoomend",
+        drawFog
+    );
+
+}
+
+
+/* =========================================================
+   PLAYER ICON
+========================================================= */
+
+const playerIcon =
+    L.divIcon({
+
+        className: "",
+
+        html: `
+            <div class="player-marker-wrapper">
+
+                <div class="player-pulse">
+                </div>
+
+                <div class="player-marker">
+                </div>
+
+            </div>
+        `,
+
+        iconSize:
+            [24, 24],
+
+        iconAnchor:
+            [12, 12]
+
+    });
+
+
+/* =========================================================
+   GPS
+========================================================= */
+
+function startGPS() {
+
+    if (!navigator.geolocation) {
+
+        gpsStatus.textContent =
+            "GPS не підтримується";
+
+        return;
+
+    }
+
+
+    gpsStatus.textContent =
+        "Пошук GPS...";
+
+
+    watchId =
+        navigator.geolocation
+        .watchPosition(
+
+            handlePosition,
+
+            handleGPSError,
+
+            {
+
+                enableHighAccuracy:
+                    true,
+
+                maximumAge:
+                    1000,
+
+                timeout:
+                    15000
+
+            }
+
+        );
+
+}
+
+
+/* =========================================================
+   GPS POSITION
+========================================================= */
+
+function handlePosition(
+    position
+) {
+
+    const latitude =
+        position.coords.latitude;
+
+    const longitude =
+        position.coords.longitude;
+
+    const accuracy =
+        position.coords.accuracy;
+
+
+    currentPosition = {
+
+        lat: latitude,
+
+        lng: longitude,
+
+        accuracy: accuracy
+
     };
 
-    if (!Number.isFinite(fix.coords.latitude) || !Number.isFinite(fix.coords.longitude)) return;
+    // OSM environmental interactions follow the real GPS position.
+    // Their own distance caches prevent unnecessary Overpass requests.
+    // Додаткові OSM-системи не мають права ламати GPS/карту.
+    try { refreshNearbyTrees(latitude, longitude); } catch (e) { console.warn("Trees:", e); }
+    try { refreshNearbyWater(latitude, longitude); } catch (e) { console.warn("Water:", e); }
 
-    if (nonCriticalPositionTimer) clearTimeout(nonCriticalPositionTimer);
-    nonCriticalPositionTimer = setTimeout(() => {
-        nonCriticalPositionTimer = null;
 
-        // Every subsystem is isolated: one failure cannot break GPS/map updates.
-        try { consumeCarFuelByGps(fix, Number(speedKmh) || 0); } catch (e) {
-            console.warn("Car fuel subsystem:", e);
+    refreshOpenBuildingPopup();
+
+
+    const latLng =
+        [
+            latitude,
+            longitude
+        ];
+
+
+    /*
+        PLAYER
+    */
+
+    if (!playerMarker) {
+
+        playerMarker =
+            L.marker(
+                latLng,
+                {
+                    icon:
+                        playerIcon
+                }
+            )
+            .addTo(map);
+
+    }
+    else {
+
+        playerMarker
+            .setLatLng(
+                latLng
+            );
+
+    }
+
+
+    /*
+        GPS ACCURACY
+    */
+
+    if (!accuracyCircle) {
+
+        accuracyCircle =
+            L.circle(
+                latLng,
+                {
+
+                    radius:
+                        accuracy,
+
+                    weight:
+                        1,
+
+                    color:
+                        "#168cff",
+
+                    fillColor:
+                        "#168cff",
+
+                    opacity:
+                        0.35,
+
+                    fillOpacity:
+                        0.05
+
+                }
+            )
+            .addTo(map);
+
+    }
+    else {
+
+        accuracyCircle
+            .setLatLng(
+                latLng
+            );
+
+        accuracyCircle
+            .setRadius(
+                accuracy
+            );
+
+    }
+
+
+    /*
+        MAP FOLLOW
+    */
+
+    if (firstGPSPosition) {
+
+        map.setView(
+            latLng,
+            18
+        );
+
+        firstGPSPosition =
+            false;
+
+    }
+
+    /*
+        Після першого GPS-фіксу камера більше
+        не рухається автоматично. Карту можна
+        вільно гортати. Для повернення до себе
+        використовується кнопка компаса.
+    */
+
+
+    /*
+        PROFILE DISTANCE
+    */
+
+    trackWalkedDistance(position);
+
+
+    /*
+        SPEED
+    */
+
+    const speed =
+        calculateSpeed(
+            position
+        );
+
+    speedElement.textContent =
+        speed.toFixed(1);
+
+    survivalCurrentSpeedKmh = speed;
+    updateSurvivalThirst(speed);
+    updateSurvivalHunger(speed);
+    updateHealthAndRest(speed);
+    // Машина отримує GPS-фікс, але її помилка не зупиняє карту.
+    try { consumeCarFuelByGps(position, speed); } catch (e) { console.warn("Car fuel:", e); }
+
+
+    /*
+        AUTOMATIC BIOME DETECTION
+    */
+
+    updateBiomeFromPosition(
+        latitude,
+        longitude
+    );
+
+
+    /*
+        VISION
+    */
+
+    const radius =
+        getCurrentVisionRadius();
+
+
+    /*
+        Save explored area.
+    */
+
+    saveExploredPointIfNeeded(
+        latitude,
+        longitude,
+        radius
+    );
+
+
+    /*
+        Redraw fog immediately.
+    */
+
+    drawFog();
+
+    updateHUD();
+
+
+    gpsStatus.textContent =
+        "GPS ±" +
+        Math.round(
+            accuracy
+        ) +
+        " м";
+
+}
+
+
+/* =========================================================
+   COMPASS — CENTER MAP ON PLAYER
+========================================================= */
+
+centerButton.addEventListener(
+    "click",
+    function () {
+
+        if (!currentPosition || !map) {
+            gpsStatus.textContent =
+                "GPS-позиція ще не визначена";
+            return;
         }
 
-        try {
-            if (typeof refreshNearbyTrees === "function") {
-                refreshNearbyTrees(fix.coords.latitude, fix.coords.longitude);
+        map.flyTo(
+            [
+                currentPosition.lat,
+                currentPosition.lng
+            ],
+            map.getZoom(),
+            {
+                animate: true,
+                duration: 0.6
             }
-        } catch (e) {
-            console.warn("Tree subsystem:", e);
+        );
+    }
+);
+
+
+
+/* =========================================================
+   BUILDINGS — OSM POLYGONS + LEAFLET POPUPS
+========================================================= */
+
+function scheduleBuildingLoad() {
+    clearTimeout(buildingLoadTimer);
+    buildingLoadTimer = setTimeout(loadVisibleBuildings, 450);
+}
+
+/* Add one polygon once. Existing polygons are reused, never cleared. */
+function ensureBuildingRendered(id, ring) {
+    if (!buildingLayer || !id || !Array.isArray(ring) || ring.length < 3) return null;
+
+    const cached = buildingMemoryCache.get(id);
+    if (cached && cached.polygon && buildingLayer.hasLayer(cached.polygon)) {
+        cached.ring = ring;
+        return cached;
+    }
+
+    let existing = null;
+    buildingLayer.eachLayer(layer => {
+        if (!existing && layer._buildingRecord && layer._buildingRecord.id === id) {
+            existing = layer._buildingRecord;
+        }
+    });
+    if (existing) {
+        buildingMemoryCache.set(id, existing);
+        return existing;
+    }
+
+    const state = buildingStates[id] || {};
+    const polygon = L.polygon(ring, {
+        ...getBuildingStyle(state),
+        pane:"buildingsPane",
+        interactive:true,
+        bubblingMouseEvents:false
+    });
+    const record = { id, ring, polygon };
+    polygon._buildingRecord = record;
+    polygon.bindPopup(() => buildBuildingPopup(record), {
+        closeButton:true,
+        autoPan:true,
+        className:"game-building-popup"
+    });
+    polygon.on("click", e => {
+        L.DomEvent.stopPropagation(e);
+        openBuildingRecord = record;
+        polygon.setPopupContent(buildBuildingPopup(record));
+        polygon.openPopup(e.latlng);
+    });
+    polygon.on("popupopen", () => {
+        openBuildingRecord = record;
+        refreshOpenBuildingPopup();
+    });
+    polygon.on("popupclose", () => {
+        if (openBuildingRecord === record) openBuildingRecord = null;
+    });
+    polygon.addTo(buildingLayer);
+    buildingMemoryCache.set(id, record);
+    return record;
+}
+
+function renderCachedBuildings() {
+    if (!buildingLayer) return;
+    const cached = Array.from(buildingMemoryCache.values());
+    cached.forEach(item => ensureBuildingRendered(item.id, item.ring));
+
+    scheduleSpecialBuildingMarkerRefresh();
+}
+
+async function loadVisibleBuildings() {
+    if (!map || map.getZoom() < 16) {
+        /* Never delete already loaded buildings when zooming out. */
+        renderCachedBuildings();
+        renderSavedBaseBackup();
+        return;
+    }
+
+    const b = map.getBounds();
+    const bbox = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].join(",");
+    const query = `[out:json][timeout:18];(way["building"](${bbox});relation["building"](${bbox});
+  node["amenity"~"^(pharmacy|hospital|clinic|doctors|fuel|restaurant|cafe|fast_food|food_court|bar|pub|vehicle_inspection)$"](${south},${west},${north},${east});
+  node["healthcare"~"^(pharmacy|hospital|clinic|doctor|doctors)$"](${south},${west},${north},${east});
+  node["shop"~"^(supermarket|convenience|grocery|general|department_store|mall|greengrocer|bakery|butcher|deli|beverages|alcohol|car_repair|tyres|car_parts|motorcycle_repair|fuel)$"](${south},${west},${north},${east});
+);out geom;`;
+
+    if (buildingRequestController) buildingRequestController.abort();
+    buildingRequestController = new AbortController();
+
+    try {
+        const endpoints = [
+            "https://overpass-api.de/api/interpreter",
+            "https://overpass.kumi.systems/api/interpreter",
+            "https://overpass.nchc.org.tw/api/interpreter"
+        ];
+        let data = null;
+        let lastError = null;
+
+        for (const endpoint of endpoints) {
+            try {
+                const response = await fetch(endpoint, {
+                    method:"POST",
+                    headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
+                    body:"data=" + encodeURIComponent(query),
+                    signal:buildingRequestController.signal
+                });
+                if (!response.ok) throw new Error("Overpass HTTP " + response.status);
+                data = await response.json();
+                break;
+            } catch (error) {
+                if (error.name === "AbortError") throw error;
+                lastError = error;
+            }
         }
 
-        try {
-            if (typeof refreshNearbyWater === "function") {
-                refreshNearbyWater(fix.coords.latitude, fix.coords.longitude);
-            }
-        } catch (e) {
-            console.warn("Water subsystem:", e);
+        if (!data) throw lastError || new Error("Overpass недоступний");
+        renderOSMBuildings(data.elements || []);
+    } catch (error) {
+        if (error.name !== "AbortError") {
+            console.warn("Не вдалося завантажити будівлі OSM, використовую локальний кеш:", error);
+            renderCachedBuildings();
+            renderSavedBaseBackup();
+            showGameMessage("Overpass недоступний — використовую збережені будівлі.", "error");
         }
-    }, 0);
+    }
+}
+
+function renderOSMBuildings(elements) {
+    if (!buildingLayer) return;
+    let changed = false;
+
+    elements.forEach(el => {
+        const rings = [];
+        if (el.type === "way" && Array.isArray(el.geometry) && el.geometry.length >= 3) {
+            rings.push(el.geometry.map(p => [p.lat, p.lon]));
+        } else if (el.type === "relation" && Array.isArray(el.members)) {
+            el.members.forEach(m => {
+                if ((m.role === "outer" || !m.role) && Array.isArray(m.geometry) && m.geometry.length >= 3) {
+                    rings.push(m.geometry.map(p => [p.lat, p.lon]));
+                }
+            });
+        }
+
+        rings.forEach((ring, index) => {
+            const buildingId = `${el.type}/${el.id}${rings.length > 1 ? "/" + index : ""}`;
+            if (!buildingMemoryCache.has(buildingId)) changed = true;
+            ensureBuildingRendered(buildingId, ring);
+        });
+    });
+
+    if (changed) saveBuildingGeometryCache();
+    renderSavedBaseBackup();
+}
+
+function loadBaseBackup() {
+    try {
+        return JSON.parse(localStorage.getItem(BASE_BACKUP_STORAGE_KEY) || "null");
+    } catch (_) {
+        return null;
+    }
+}
+
+function saveBaseBackup(record) {
+    const center = record.polygon.getBounds().getCenter();
+    localStorage.setItem(BASE_BACKUP_STORAGE_KEY, JSON.stringify({
+        id: record.id,
+        ring: record.ring,
+        lat: center.lat,
+        lng: center.lng
+    }));
+    buildingMemoryCache.set(record.id, record);
+    saveBuildingGeometryCache();
+}
+
+function renderSavedBaseBackup() {
+    if (!buildingLayer) return;
+    const backup = loadBaseBackup();
+    if (!backup || !Array.isArray(backup.ring) || backup.ring.length < 3) return;
+
+    let alreadyRendered = false;
+    buildingLayer.eachLayer(layer => {
+        if (layer._buildingRecord && layer._buildingRecord.id === backup.id) alreadyRendered = true;
+    });
+    if (alreadyRendered) return;
+
+    buildingStates[backup.id] = { ...(buildingStates[backup.id] || {}), isBase:true, isDepleted:false };
+    const polygon = L.polygon(backup.ring, { ...getBuildingStyle(buildingStates[backup.id]), pane:"buildingsPane", interactive:true, bubblingMouseEvents:false });
+    const record = { id: backup.id, ring: backup.ring, polygon };
+    polygon._buildingRecord = record;
+    polygon.bindPopup(() => buildBuildingPopup(record), { closeButton:true, autoPan:true, className:"game-building-popup" });
+    polygon.on("click", (e) => {
+        L.DomEvent.stopPropagation(e);
+        openBuildingRecord = record;
+        polygon.setPopupContent(buildBuildingPopup(record));
+        polygon.openPopup(e.latlng);
+    });
+    polygon.on("popupopen", () => { openBuildingRecord = record; refreshOpenBuildingPopup(); });
+    polygon.on("popupclose", () => { if (openBuildingRecord === record) openBuildingRecord = null; });
+    polygon.addTo(buildingLayer);
+    buildingMemoryCache.set(record.id, record);
+    saveBuildingGeometryCache();
+}
+
+function getBuildingStyle(state) {
+    if (state.isBase) {
+        return { color:"#45d477", weight:2, fillColor:"#2cb55d", fillOpacity:.42 };
+    }
+    if (state.isDepleted && (!state.loot || state.loot.length === 0)) {
+        return { color:"#9aa5af", weight:1, fillColor:"#6f7b86", fillOpacity:.22 };
+    }
+    return { color:"#d8dee5", weight:2, fillColor:"#9aa6b2", fillOpacity:.24 };
+}
+
+function pointInRing(lat, lng, ring) {
+    let inside = false;
+    for (let i=0, j=ring.length-1; i<ring.length; j=i++) {
+        const yi=ring[i][0], xi=ring[i][1], yj=ring[j][0], xj=ring[j][1];
+        const hit = ((yi > lat) !== (yj > lat)) &&
+            (lng < (xj-xi) * (lat-yi) / ((yj-yi) || 1e-12) + xi);
+        if (hit) inside = !inside;
+    }
+    return inside;
+}
+
+/* Closest point on each polygon edge, then Haversine to that point. */
+function distanceToBuilding(lat, lng, ring) {
+    if (!ring || !ring.length) return Infinity;
+    if (pointInRing(lat, lng, ring)) return 0;
+
+    const lat0 = lat * Math.PI / 180;
+    const metersPerDegLat = 111320;
+    const metersPerDegLng = 111320 * Math.cos(lat0);
+    let best = Infinity;
+
+    for (let i=0; i<ring.length; i++) {
+        const a = ring[i], b = ring[(i+1) % ring.length];
+        const ax=(a[1]-lng)*metersPerDegLng, ay=(a[0]-lat)*metersPerDegLat;
+        const bx=(b[1]-lng)*metersPerDegLng, by=(b[0]-lat)*metersPerDegLat;
+        const dx=bx-ax, dy=by-ay;
+        const denom=dx*dx+dy*dy;
+        let t = denom ? -(ax*dx+ay*dy)/denom : 0;
+        t = Math.max(0, Math.min(1, t));
+        const nearLat = a[0] + (b[0]-a[0])*t;
+        const nearLng = a[1] + (b[1]-a[1])*t;
+        best = Math.min(best, getDistance(lat, lng, nearLat, nearLng));
+    }
+    return best;
+}
+
+function getBuildingDistance(record) {
+    if (!currentPosition) return Infinity;
+    return distanceToBuilding(currentPosition.lat, currentPosition.lng, record.ring);
+}
+
+
+/* ===== Automatic OSM building classification ===== */
+
+function pointInBuildingRing(lat, lng, ring) {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const yi = Number(ring[i][0]), xi = Number(ring[i][1]);
+        const yj = Number(ring[j][0]), xj = Number(ring[j][1]);
+        const intersects =
+            ((yi > lat) !== (yj > lat)) &&
+            (lng < (xj - xi) * (lat - yi) / ((yj - yi) || 1e-12) + xi);
+        if (intersects) inside = !inside;
+    }
+    return inside;
+}
+
+function isInterestingPoiTags(tags = {}) {
+    const a = String(tags.amenity || "").toLowerCase();
+    const s = String(tags.shop || "").toLowerCase();
+    const h = String(tags.healthcare || "").toLowerCase();
+    return [
+        "pharmacy","hospital","clinic","doctors","fuel",
+        "restaurant","cafe","fast_food","food_court","bar","pub",
+        "vehicle_inspection"
+    ].includes(a) ||
+    ["pharmacy","hospital","clinic","doctor","doctors"].includes(h) ||
+    [
+        "supermarket","convenience","grocery","general","department_store",
+        "mall","greengrocer","bakery","butcher","deli","beverages","alcohol",
+        "car_repair","tyres","car_parts","motorcycle_repair","fuel"
+    ].includes(s);
+}
+
+function attachPoisToCachedBuildings(elements) {
+    if (!Array.isArray(elements)) return false;
+
+    const pois = elements
+        .filter(el =>
+            el && el.tags && isInterestingPoiTags(el.tags) &&
+            Number.isFinite(Number(el.lat)) && Number.isFinite(Number(el.lon))
+        )
+        .map(el => ({
+            id: `${el.type || "node"}/${el.id}`,
+            lat: Number(el.lat),
+            lng: Number(el.lon),
+            tags: el.tags
+        }));
+
+    if (!pois.length) return false;
+
+    let changed = false;
+
+    for (const poi of pois) {
+        for (const cached of buildingMemoryCache.values()) {
+            if (!cached || !Array.isArray(cached.ring) || cached.ring.length < 3) continue;
+            if (pointInBuildingRing(poi.lat, poi.lng, cached.ring)) {
+                cached.poi = poi;
+                changed = true;
+
+                const record = buildingRecords &&
+                    buildingRecords.find(r => r && r.id === cached.id);
+                if (record) {
+                    record.poi = poi;
+                    refreshBuildingTypeMarker(record);
+                    if (record.polygon) {
+                        record.polygon.setPopupContent(buildBuildingPopup(record));
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    if (changed) saveBuildingGeometryCache();
+    return changed;
+
+    scheduleSpecialBuildingMarkerRefresh();
+}
+
+
+function classifyBuilding(tags = {}, poi = null) {
+    const merged = { ...(tags || {}), ...((poi && poi.tags) || {}) };
+    const amenity = String(merged.amenity || "").toLowerCase();
+    const shop = String(merged.shop || "").toLowerCase();
+    const healthcare = String(merged.healthcare || "").toLowerCase();
+    const building = String(merged.building || "").toLowerCase();
+    const name = String(merged.name || "").toLowerCase();
+
+    if (
+        amenity === "pharmacy" || amenity === "hospital" ||
+        amenity === "clinic" || amenity === "doctors" ||
+        healthcare === "pharmacy" || healthcare === "hospital" ||
+        healthcare === "clinic" || healthcare === "doctor" ||
+        healthcare === "doctors" || building === "hospital"
+    ) return { type:"medical", icon:"✚", label:
+        amenity === "pharmacy" || healthcare === "pharmacy" ? "Аптека" :
+        amenity === "hospital" || healthcare === "hospital" || building === "hospital" ? "Лікарня" :
+        "Медичний об'єкт"
+    };
+
+    if (amenity === "fuel" || shop === "fuel" || name.includes("азс"))
+        return { type:"fuel", icon:"⛽", label:"АЗС" };
+
+    if (
+        shop === "car_repair" || shop === "tyres" || shop === "car_parts" ||
+        shop === "motorcycle_repair" || amenity === "vehicle_inspection" ||
+        name.includes("сто") || name.includes("автосерв") || name.includes("шиномонтаж")
+    ) return { type:"service", icon:"🔧", label:"СТО / автосервіс" };
+
+
+    if (
+        shop === "mall" || shop === "department_store" ||
+        building === "retail" ||
+        name.includes("ашан") || name.includes("auchan") ||
+        name.includes("епіцентр") || name.includes("epicentr")
+    ) return { type:"mall", icon:"🏬", label:"ТРЦ / гіпермаркет" };
+
+    if (
+        shop === "supermarket" || shop === "convenience" || shop === "grocery" ||
+        shop === "general" || shop === "department_store" || shop === "mall" ||
+        shop === "greengrocer" || shop === "bakery" || shop === "butcher" ||
+        shop === "deli" || shop === "beverages" || shop === "alcohol"
+    ) return { type:"shop", icon:"🛒", label:"Магазин" };
+
+    if (
+        amenity === "restaurant" || amenity === "cafe" ||
+        amenity === "fast_food" || amenity === "food_court" ||
+        amenity === "bar" || amenity === "pub"
+    ) return { type:"food", icon:"🍴", label:"Заклад харчування" };
+
+    return { type:"house", icon:"🏠", label:"Будівля" };
+}
+
+function getBuildingDisplayInfo(record) {
+    const state = buildingStates[record.id] || {};
+    if (state.isBase) {
+        return { type: "base", icon: "🛡️", label: "Твоя Головна База" };
+    }
+    return classifyBuilding(record.tags || {}, record.poi || null);
+}
+
+function createBuildingTypeMarker(record) {
+    if (!map || !record || !record.polygon) return null;
+
+    const info = getBuildingDisplayInfo(record);
+    let center;
+
+    try {
+        center = record.polygon.getBounds().getCenter();
+    } catch (_) {
+        return null;
+    }
+
+    const icon = L.divIcon({
+        className: "building-type-icon-wrap",
+        html: `<div class="building-type-icon ${info.type === "base" ? "base" : ""}" title="${info.label}">${info.icon}</div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+    });
+
+    const marker = L.marker(center, {
+        icon,
+        interactive: false,
+        keyboard: false,
+        zIndexOffset: 650
+    }).addTo(map);
+
+    record.typeMarker = marker;
+    return marker;
+}
+
+function refreshBuildingTypeMarker(record) {
+    if (!record || !map) return;
+
+    if (record.typeMarker) {
+        try { map.removeLayer(record.typeMarker); } catch (_) {}
+        record.typeMarker = null;
+    }
+
+    createBuildingTypeMarker(record);
+}
+
+function refreshAllBuildingTypeMarkers() {
+    if (!Array.isArray(buildingRecords)) return;
+    buildingRecords.forEach(refreshBuildingTypeMarker);
+}
+
+
+function buildBuildingPopup(record) {
+    const displayInfo = getBuildingDisplayInfo(record);
+    const state = buildingStates[record.id] || {};
+    const distance = getBuildingDistance(record);
+    const root = document.createElement("div");
+    root.className = "building-popup";
+
+    const title = document.createElement("div");
+    title.className = "building-popup-title";
+    title.textContent = state.isBase ? "🏠 Твоя Головна База" : state.isDepleted ? ((state.storedItems && state.storedItems.length) ? "📦 У будівлі залишені предмети" : "📭 Будівля порожня") : "${displayInfo.icon} Об’єкт: ${displayInfo.label}";
+    root.appendChild(title);
+
+    const distanceEl = document.createElement("div");
+    distanceEl.className = "building-popup-distance";
+    distanceEl.textContent = Number.isFinite(distance) ? `Відстань: ${Math.round(distance)} м` : "Очікування GPS-позиції…";
+    root.appendChild(distanceEl);
+
+    const actions = document.createElement("div");
+    actions.className = "building-popup-actions";
+    root.appendChild(actions);
+
+    if (state.isBase) {
+        const allowed = distance <= BASE_PROTECTION_RADIUS;
+        const btn = popupButton("📦 Склад Бази", "storage", !allowed, () => openBaseStorage(record));
+        actions.appendChild(btn);
+        if (!allowed) addPopupWarning(root, Number.isFinite(distance) ? "Потрібно увійти в зону захисту" : "Потрібно визначити GPS-позицію");
+    } else if (!state.isDepleted) {
+        const allowed = distance < BUILDING_INTERACTION_RADIUS;
+        actions.appendChild(popupButton("🔍 Обшукати", "search", !allowed, () => searchBuilding(record)));
+        actions.appendChild(popupButton("🛡️ Захопити", "capture", !allowed, () => captureBuilding(record)));
+        if (!allowed) {
+            const extra = Number.isFinite(distance) ? Math.max(1, Math.ceil(distance - BUILDING_INTERACTION_RADIUS)) : null;
+            addPopupWarning(root, extra === null ? "Потрібно визначити GPS-позицію" : `Занадто далеко. Підійдіть ближче на ${extra} метрів`);
+        }
+    }
+    return root;
+}
+
+function popupButton(text, kind, disabled, handler) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `building-action ${kind}`;
+    btn.textContent = text;
+    btn.disabled = disabled;
+    btn.addEventListener("click", e => { e.stopPropagation(); if (!btn.disabled) handler(); });
+    return btn;
+}
+
+function addPopupWarning(root, text) {
+    const warning = document.createElement("div");
+    warning.className = "building-popup-warning";
+    warning.textContent = text;
+    root.appendChild(warning);
+}
+
+function refreshOpenBuildingPopup() {
+    if (!openBuildingRecord || !openBuildingRecord.polygon || !openBuildingRecord.polygon.isPopupOpen()) return;
+    openBuildingRecord.polygon.setPopupContent(buildBuildingPopup(openBuildingRecord));
+}
+
+function searchBuilding(record) {
+    if (getBuildingDistance(record) >= BUILDING_INTERACTION_RADIUS) {
+        return refreshOpenBuildingPopup();
+    }
+
+    const state = buildingStates[record.id] || {};
+    if (state.isBase) return;
+
+    /*
+       Loot is generated only once per building.
+       The existing 50% rule is preserved:
+       50% -> one random item (water or food)
+       50% -> empty building.
+       Generated loot remains attached to this building until collected.
+    */
+    if (!state.lootGenerated) {
+        state.lootGenerated = true;
+        state.loot = generateLootForBuilding(record);
+
+        buildingStates[record.id] = state;
+        saveBuildingStates();
+    }
+
+    ensureBuildingSlots(record);
+    openBuildingLootModal(record);
+
+    scheduleSpecialBuildingMarkerRefresh();
+}
+
+
+let activeLootBuilding = null;
+
+function getBuildingLootState(record) {
+    const state = buildingStates[record.id] || {};
+    if (!Array.isArray(state.loot)) state.loot = [];
+    return state;
+}
+
+function buildingLootRemaining(state) {
+    return (state.loot || []).reduce(
+        (sum, item) => sum + (item.quantity || 1),
+        0
+    );
+}
+
+function openBuildingLootModal(record) {
+    const persistentState = getBuildingState(record);
+    if (!Array.isArray(persistentState.storedItems)) persistentState.storedItems = [];
+
+    activeLootBuilding = record;
+    renderBuildingLootModal();
+    const modal = document.getElementById("buildingLootModal");
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+    if (map) map.closePopup();
+}
+
+function closeBuildingLootModal() {
+    const modal = document.getElementById("buildingLootModal");
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+    activeLootBuilding = null;
+}
+
+function setBuildingLootMessage(message, type = "") {
+    const el = document.getElementById("buildingLootMessage");
+    el.textContent = message || "";
+    el.className = type || "";
+}
+
+
+
+/* =========================================================
+   24 PERSISTENT PHYSICAL SLOTS PER BUILDING
+========================================================= */
+const BUILDING_SLOT_COUNT = 24;
+
+function ensureBuildingSlots(record) {
+    const state = getBuildingState(record);
+    if (!Array.isArray(state.slots) || state.slots.length !== BUILDING_SLOT_COUNT) {
+        const slots = Array(BUILDING_SLOT_COUNT).fill(null);
+        const oldItems = [];
+        for (const stack of (state.loot || [])) oldItems.push({...stack});
+        for (const stack of (state.storedItems || [])) oldItems.push({...stack});
+        oldItems.slice(0, BUILDING_SLOT_COUNT).forEach((item, i) => slots[i] = item);
+        state.slots = slots;
+        state.loot = [];
+        state.storedItems = [];
+        buildingStates[record.id] = state;
+        saveBuildingStates();
+    }
+    return state;
+}
+
+function buildingSlotItemCount(state) {
+    return (state.slots || []).reduce((sum, item) => sum + (item ? Number(item.quantity || 1) : 0), 0);
+}
+
+function moveInventoryItemToBuildingSlot(record, inventoryIndex) {
+    const state = ensureBuildingSlots(record);
+    const item = inventory[inventoryIndex];
+    if (!item) return;
+    let slotIndex = state.slots.findIndex(slot => !slot);
+    if (slotIndex < 0) {
+        setBuildingLootMessage("У будівлі немає вільних комірок.", "error");
+        return;
+    }
+    const existingIndex = state.slots.findIndex(slot =>
+        slot && slot.id === item.id && !!slot.external === !!item.external &&
+        !slot.specialCarrySystem
+    );
+    if (existingIndex >= 0) slotIndex = existingIndex;
+
+    if (state.slots[slotIndex]) {
+        state.slots[slotIndex].quantity = Number(state.slots[slotIndex].quantity || 1) + 1;
+    } else {
+        state.slots[slotIndex] = {
+            id:item.id, name:item.name, icon:item.icon || "📦",
+            weight:Number(item.weight || 0), volume:Number(item.volume || 0),
+            external:!!item.external, quantity:1
+        };
+    }
+    inventory.splice(inventoryIndex, 1);
+    saveInventory();
+    saveBuildingStates();
+    updateInventoryUI();
+    renderBuildingLootModal();
+}
+
+function takeBuildingSlot(record, slotIndex) {
+    const state = ensureBuildingSlots(record);
+    const item = state.slots[slotIndex];
+    if (!item) return;
+
+    if (item.specialCarrySystem && item.carrySystemId) {
+        ownCarrySystem(item.carrySystemId);
+        state.slots[slotIndex] = null;
+        saveBuildingStates();
+        renderBuildingLootModal();
+        return;
+    }
+    if (!canAddItem(Number(item.weight || 0), item.external ? 0 : Number(item.volume || 0))) {
+        setBuildingLootMessage("Немає місця у твоєму інвентарі.", "error");
+        return;
+    }
+    addItem({
+        id:item.id, name:item.name, icon:item.icon,
+        weight:Number(item.weight || 0), volume:Number(item.volume || 0),
+        external:!!item.external,
+        fuelLiters:item.fuelLiters
+    });
+    item.quantity = Number(item.quantity || 1) - 1;
+    if (item.quantity <= 0) state.slots[slotIndex] = null;
+    state.isDepleted = buildingSlotItemCount(state) === 0;
+    saveBuildingStates();
+    renderBuildingLootModal();
+    updateInventoryUI();
+    if (record.polygon) record.polygon.setPopupContent(buildBuildingPopup(record));
+
+    scheduleSpecialBuildingMarkerRefresh();
+}
+
+function renderBuildingLootModalV2() {
+    if (!activeLootBuilding) return;
+    const state = ensureBuildingSlots(activeLootBuilding);
+    const grid = document.getElementById("buildingLootGrid");
+    grid.innerHTML = "";
+
+    for (let i = 0; i < BUILDING_SLOT_COUNT; i++) {
+        const item = state.slots[i];
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "building-loot-cell" + (item ? "" : " empty");
+        if (item) {
+            cell.innerHTML = `
+                <div class="loot-icon">${item.icon || "📦"}</div>
+                <div class="loot-name">${item.name}</div>
+                <div class="loot-count">×${Number(item.quantity || 1)}</div>`;
+            cell.addEventListener("click", () => takeBuildingSlot(activeLootBuilding, i));
+        } else {
+            cell.innerHTML = `<div style="opacity:.22;font-size:20px;">＋</div>`;
+            cell.disabled = true;
+        }
+        grid.appendChild(cell);
+    }
+
+    const takeAll = document.getElementById("takeAllBuildingLoot");
+    if (takeAll) takeAll.disabled = buildingSlotItemCount(state) === 0;
+    setBuildingLootMessage(
+        buildingSlotItemCount(state) ? "Натисни на предмет, щоб перемістити його до себе." : "📭 Тут порожньо."
+    );
+    renderBuildingBackpackGridV2(activeLootBuilding);
+
+    scheduleSpecialBuildingMarkerRefresh();
+}
+
+function renderBuildingBackpackGridV2(record) {
+    const grid = document.getElementById("buildingBackpackGrid");
+    if (!grid) return;
+    grid.innerHTML = "";
+    const groups = [];
+    inventory.forEach(item => {
+        let g = groups.find(x => x.item.id === item.id && !!x.item.external === !!item.external);
+        if (!g) { g = {item, count:0}; groups.push(g); }
+        g.count++;
+    });
+    for (const g of groups.slice(0,24)) {
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "building-loot-cell";
+        cell.innerHTML = `<div class="loot-icon">${g.item.icon || "📦"}</div>
+            <div class="loot-name">${g.item.name}</div><div class="loot-count">×${g.count}</div>`;
+        cell.addEventListener("click", () => {
+            const idx = inventory.findIndex(x => x.id === g.item.id && !!x.external === !!g.item.external);
+            if (idx >= 0) moveInventoryItemToBuildingSlot(record, idx);
+        });
+        grid.appendChild(cell);
+    }
+    for (let i = Math.min(groups.length,24); i < 24; i++) {
+        const empty = document.createElement("div");
+        empty.className = "building-loot-cell empty";
+        grid.appendChild(empty);
+    }
+}
+
+function renderBuildingBackpackGrid(record) {
+    return renderBuildingBackpackGridV2(record);
+}
+
+function renderBuildingLootModal() {
+    return renderBuildingLootModalV2();
+}
+
+function finalizeBuildingLootState(record, state) {
+    if (buildingLootRemaining(state) === 0) {
+        state.loot = [];
+        state.isDepleted = true;
+    }
+
+    buildingStates[record.id] = state;
+    saveBuildingStates();
+
+    if (record.polygon) {
+        record.polygon.setStyle(getBuildingStyle(state));
+        record.polygon.setPopupContent(buildBuildingPopup(record));
+    }
+
+    updateInventoryUI();
+    renderBuildingLootModal();
+}
+
+function takeOneBuildingLoot(index) {
+    if (!activeLootBuilding) return;
+
+    const state = getBuildingLootState(activeLootBuilding);
+    const item = state.loot[index];
+    if (!item) return;
+
+    if (item.specialCarrySystem && item.carrySystemId) {
+        ownCarrySystem(item.carrySystemId);
+        state.loot.splice(index, 1);
+        if (!state.loot.length) state.isDepleted = true;
+        buildingStates[activeBuildingLootRecord.id] = state;
+        saveBuildingStates();
+        renderBuildingLootModal();
+        refreshBuildingStyle(activeBuildingLootRecord);
+        showGameMessage(`${item.icon} ${item.name} тепер доступна замість рюкзака`, "success");
+        return;
+    }
+
+    if (!canAddItem(item.weight, item.volume)) {
+        setBuildingLootMessage(
+            "Немає місця в рюкзаку для цього предмета.",
+            "error"
+        );
+        return;
+    }
+
+    addItem({
+        id: item.id,
+        name: item.name,
+        icon: item.icon,
+        weight: item.weight,
+        volume: item.volume,
+        external: !!item.external
+    });
+
+    item.quantity = (item.quantity || 1) - 1;
+    if (item.quantity <= 0) state.loot.splice(index, 1);
+
+    setBuildingLootMessage(
+        `Забрано: ${item.icon || "📦"} ${item.name}`,
+        "success"
+    );
+    finalizeBuildingLootState(activeLootBuilding, state);
+}
+
+function takeAllBuildingLoot() {
+    if (!activeLootBuilding) return;
+    const state = ensureBuildingSlots(activeLootBuilding);
+    let taken = 0;
+    for (let i = 0; i < state.slots.length; i++) {
+        const before = buildingSlotItemCount(state);
+        if (state.slots[i]) takeBuildingSlot(activeLootBuilding, i);
+        const after = buildingSlotItemCount(state);
+        if (after < before) taken += before - after;
+    }
+    setBuildingLootMessage(taken ? `Забрано предметів: ${taken}.` : "Нічого не вдалося забрати.", taken ? "success" : "error");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const closeBtn = document.getElementById("closeBuildingLoot");
+    const takeAllBtn = document.getElementById("takeAllBuildingLoot");
+    const modal = document.getElementById("buildingLootModal");
+
+    if (closeBtn) closeBtn.addEventListener("click", closeBuildingLootModal);
+    if (takeAllBtn) takeAllBtn.addEventListener("click", takeAllBuildingLoot);
+
+    if (modal) {
+        modal.addEventListener("click", (event) => {
+            if (event.target === modal) closeBuildingLootModal();
+        });
+    }
+});
+
+function captureBuilding(record) {
+    if (getBuildingDistance(record) >= BUILDING_INTERACTION_RADIUS) return refreshOpenBuildingPopup();
+
+    /* Only one building is the player's Main Base. */
+    Object.keys(buildingStates).forEach(id => {
+        if (buildingStates[id] && buildingStates[id].isBase) buildingStates[id].isBase = false;
+    });
+    buildingStates[record.id] = { ...(buildingStates[record.id] || {}), isBase:true, isDepleted:false };
+    saveBuildingStates();
+    saveBaseBackup(record);
+
+    /* Refresh styles of currently rendered buildings. */
+    buildingLayer.eachLayer(layer => {
+        if (!layer.getLatLngs) return;
+    });
+    record.polygon.setStyle(getBuildingStyle(buildingStates[record.id]));
+    record.polygon.setPopupContent(buildBuildingPopup(record));
+    scheduleBuildingLoad();
+
+    scheduleSpecialBuildingMarkerRefresh();
+}
+
+function openBaseStorage(record) {
+    if (getBuildingDistance(record) > BASE_PROTECTION_RADIUS) return refreshOpenBuildingPopup();
+    setStorageWarning("");
+    renderBaseStorage();
+    document.getElementById("baseStorageModal").classList.remove("hidden");
+    if (map) map.closePopup();
+}
+
+/* =========================================================
+   DAY / NIGHT
+========================================================= */
+
+/*
+    Summer rule requested:
+
+    DAY:
+        06:00 -> 21:59
+
+    NIGHT:
+        22:00 -> 05:59
+*/
+
+function isNight() {
+
+    const hour =
+        new Date().getHours();
+
+    return (
+        hour >= 22 ||
+        hour < 6
+    );
+
+}
+
+
+/* =========================================================
+   VISION RADIUS
+========================================================= */
+
+function getCurrentVisionRadius() {
+
+    /*
+        BIOME-BASED VISIBILITY:
+
+        City  = 50 meters
+        Field = 200 meters
+
+        The radius depends strictly on the
+        currently selected biome.
+    */
+
+    return currentBiome === "field"
+        ? 200
+        : 50;
+
+}
+
+
+/* =========================================================
+   FLASHLIGHT
+========================================================= */
+
+flashlightButton
+.addEventListener(
+    "click",
+    function () {
+
+        flashlightEnabled =
+            !flashlightEnabled;
+
+
+        localStorage.setItem(
+            FLASHLIGHT_STORAGE_KEY,
+            flashlightEnabled
+                ? "true"
+                : "false"
+        );
+
+
+        /*
+            If player is standing
+            somewhere and turns
+            flashlight on, this new
+            radius becomes explored.
+        */
+
+        if (currentPosition) {
+
+            const radius =
+                getCurrentVisionRadius();
+
+            saveExploredPointIfNeeded(
+
+                currentPosition.lat,
+
+                currentPosition.lng,
+
+                radius,
+
+                true
+
+            );
+
+        }
+
+
+        updateHUD();
+
+        drawFog();
+
+    }
+);
+
+
+/* =========================================================
+   AUTOMATIC BIOME DETECTION — OPENSTREETMAP / OVERPASS
+========================================================= */
+
+async function updateBiomeFromPosition(lat, lng) {
+
+    if (biomeCheckInProgress) {
+        return;
+    }
+
+    if (lastBiomeCheckPosition) {
+        const moved = getDistance(
+            lastBiomeCheckPosition.lat,
+            lastBiomeCheckPosition.lng,
+            lat,
+            lng
+        );
+
+        if (moved < BIOME_CHECK_DISTANCE) {
+            return;
+        }
+    }
+
+    biomeCheckInProgress = true;
+    if (biomeButton) biomeButton.textContent = "🛰 Визначення місцевості...";
+
+    try {
+        const query = `[out:json][timeout:10];(
+          nwr(around:${BIOME_SEARCH_RADIUS},${lat},${lng})[building];
+          nwr(around:${BIOME_SEARCH_RADIUS},${lat},${lng})[landuse~"residential|commercial|industrial|retail|construction"];
+          nwr(around:${BIOME_SEARCH_RADIUS},${lat},${lng})[place~"city|town|suburb|neighbourhood|quarter"];
+        );out tags qt;`;
+
+        const response = await fetch(
+            "https://overpass-api.de/api/interpreter",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+                },
+                body: "data=" + encodeURIComponent(query)
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Overpass HTTP " + response.status);
+        }
+
+        const data = await response.json();
+            attachPoisToCachedBuildings(data.elements);
+        const detectedBiome =
+            data.elements && data.elements.length > 0
+                ? "city"
+                : "field";
+
+        const biomeChanged = detectedBiome !== currentBiome;
+        currentBiome = detectedBiome;
+
+        localStorage.setItem(
+            BIOME_STORAGE_KEY,
+            currentBiome
+        );
+
+        lastBiomeCheckPosition = { lat, lng };
+
+        /*
+            If biome changes, redraw immediately and save
+            the new visibility circle without closing any
+            previously explored territory.
+        */
+        if (biomeChanged && currentPosition) {
+            saveExploredPointIfNeeded(
+                currentPosition.lat,
+                currentPosition.lng,
+                getCurrentVisionRadius(),
+                true
+            );
+        }
+
+        updateHUD();
+        drawFog();
+
+    }
+    catch (error) {
+        console.warn(
+            "Не вдалося автоматично визначити біом:",
+            error
+        );
+
+        /*
+            On network/API failure keep the last known biome.
+        */
+        updateHUD();
+    }
+    finally {
+        biomeCheckInProgress = false;
+    }
+}
+
+
+/* =========================================================
+   HUD
+========================================================= */
+
+function updateHUD() {
+
+    const night =
+        isNight();
+
+    const radius =
+        getCurrentVisionRadius();
+
+
+    /*
+        DAY/NIGHT
+    */
+
+    if (night) {
+
+        timeMode.textContent =
+            "🌙 Ніч";
+
+    }
+    else {
+
+        timeMode.textContent =
+            "☀️ День";
+
+    }
+
+
+    /*
+        BIOME
+    */
+
+    if (
+        currentBiome ===
+        "city"
+    ) {
+
+        if (biomeButton) biomeButton.textContent =
+            "🏙 Місто · авто";
+
+        biomeButton &&
+        biomeButton
+            .classList
+            .remove(
+                "field"
+            );
+
+    }
+    else {
+
+        if (biomeButton) biomeButton.textContent =
+            "🌾 Поле · авто";
+
+        biomeButton &&
+        biomeButton
+            .classList
+            .add(
+                "field"
+            );
+
+    }
+
+
+    /*
+        VISION
+    */
+
+    if (visionInfo) {
+        visionInfo.textContent =
+            "Поточний огляд: " +
+            radius +
+            " м";
+    }
+
+
+    /*
+        FLASHLIGHT
+    */
+
+    if (flashlightEnabled) {
+
+        flashlightButton
+            .classList
+            .add(
+                "active"
+            );
+
+        flashlightButton
+            .textContent =
+                "🔦 Вимкнути";
+
+    }
+    else {
+
+        flashlightButton
+            .classList
+            .remove(
+                "active"
+            );
+
+        flashlightButton
+            .textContent =
+                "🔦 Увімкнути";
+
+    }
+
+    const chopWoodButton = document.getElementById("chopWoodButton");
+    if (chopWoodButton) {
+        chopWoodButton.classList.toggle("unavailable", !canChopWoodHere());
+        chopWoodButton.title = currentBiome === "field"
+            ? "Зібрати одну в'язанку дров"
+            : "Доступно тільки в режимі Поле";
+    }
+
+}
+
+
+/* =========================================================
+   EXPLORED ZONES
+========================================================= */
+
+function loadExploredZones() {
+
+    try {
+
+        const saved =
+            localStorage.getItem(
+                EXPLORED_STORAGE_KEY
+            );
+
+        if (!saved) {
+
+            exploredZones = [];
+
+            return;
+
+        }
+
+
+        const parsed =
+            JSON.parse(
+                saved
+            );
+
+
+        if (
+            Array.isArray(
+                parsed
+            )
+        ) {
+
+            exploredZones =
+                parsed;
+
+        }
+
+    }
+    catch (error) {
+
+        console.error(
+            "Помилка завантаження Fog of War:",
+            error
+        );
+
+        exploredZones = [];
+
+    }
+
+}
+
+
+/* =========================================================
+   SAVE EXPLORED POINT
+========================================================= */
+
+function saveExploredPointIfNeeded(
+    lat,
+    lng,
+    radius,
+    force = false
+) {
+
+    /*
+        Radius 0 means:
+        player can see only
+        their exact position.
+
+        No meaningful area
+        is permanently revealed.
+    */
+
+    if (radius <= 0) {
+
+        return;
+
+    }
+
+
+    /*
+        First point.
+    */
+
+    if (!lastSavedZone) {
+
+        addExploredZone(
+            lat,
+            lng,
+            radius
+        );
+
+        return;
+
+    }
+
+
+    /*
+        Distance from previous
+        stored exploration point.
+    */
+
+    const distance =
+        getDistance(
+
+            lastSavedZone.lat,
+
+            lastSavedZone.lng,
+
+            lat,
+
+            lng
+
+        );
+
+
+    /*
+        We don't need thousands
+        of overlapping circles.
+
+        Save another point after
+        moving roughly 25% of
+        current visibility radius.
+
+        Minimum = 5 m.
+    */
+
+    const saveDistance =
+        Math.max(
+            5,
+            radius * 0.25
+        );
+
+
+    /*
+        Also save if radius increased.
+
+        Example:
+        night -> flashlight ON
+    */
+
+    const radiusIncreased =
+        radius >
+        lastSavedZone.radius;
+
+
+    if (
+        force ||
+        distance >= saveDistance ||
+        radiusIncreased
+    ) {
+
+        addExploredZone(
+            lat,
+            lng,
+            radius
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   ADD EXPLORED ZONE
+========================================================= */
+
+function addExploredZone(
+    lat,
+    lng,
+    radius
+) {
+
+    const zone = {
+
+        lat:
+            Number(
+                lat.toFixed(6)
+            ),
+
+        lng:
+            Number(
+                lng.toFixed(6)
+            ),
+
+        radius:
+            Math.round(
+                radius
+            )
+
+    };
+
+
+    exploredZones.push(
+        zone
+    );
+
+
+    lastSavedZone =
+        zone;
+
+
+    /*
+        MVP protection against
+        endlessly growing LocalStorage.
+
+        Keep latest 5000 circles.
+
+        Later this should be replaced
+        by merged polygons / server DB.
+    */
+
+    const MAX_ZONES =
+        5000;
+
+
+    if (
+        exploredZones.length >
+        MAX_ZONES
+    ) {
+
+        exploredZones =
+            exploredZones.slice(
+                -MAX_ZONES
+            );
+
+    }
+
+
+    try {
+
+        localStorage.setItem(
+
+            EXPLORED_STORAGE_KEY,
+
+            JSON.stringify(
+                exploredZones
+            )
+
+        );
+
+    }
+    catch (error) {
+
+        console.error(
+            "LocalStorage full:",
+            error
+        );
+
+    }
+
+
+    drawFog();
+
+}
+
+
+/* =========================================================
+   FOG CANVAS SIZE
+========================================================= */
+
+function resizeFogCanvas() {
+
+    /*
+        DevicePixelRatio makes
+        circle edges sharper
+        on phone screens.
+    */
+
+    const ratio =
+        window.devicePixelRatio ||
+        1;
+
+
+    fogCanvas.width =
+        Math.floor(
+            window.innerWidth *
+            ratio
+        );
+
+
+    fogCanvas.height =
+        Math.floor(
+            window.innerHeight *
+            ratio
+        );
+
+
+    fogCanvas.style.width =
+        window.innerWidth +
+        "px";
+
+
+    fogCanvas.style.height =
+        window.innerHeight +
+        "px";
+
+
+    fogContext.setTransform(
+        ratio,
+        0,
+        0,
+        ratio,
+        0,
+        0
+    );
+
+
+    drawFog();
+
+}
+
+
+/* =========================================================
+   METERS -> SCREEN PIXELS
+========================================================= */
+
+/*
+    Leaflet knows geographic
+    projection.
+
+    We take a geographic point,
+    calculate another point
+    X meters east,
+    then measure pixel distance.
+
+    This gives accurate screen
+    radius for current zoom.
+*/
+
+function metersToPixels(
+    lat,
+    lng,
+    meters
+) {
+
+    if (
+        !map ||
+        meters <= 0
+    ) {
+
+        return 0;
+
+    }
+
+
+    /*
+        Approximate longitude
+        degrees per meter.
+    */
+
+    const latitudeRadians =
+        lat *
+        Math.PI /
+        180;
+
+
+    const metersPerDegreeLongitude =
+        111320 *
+        Math.cos(
+            latitudeRadians
+        );
+
+
+    if (
+        Math.abs(
+            metersPerDegreeLongitude
+        ) < 0.0001
+    ) {
+
+        return 0;
+
+    }
+
+
+    const longitudeOffset =
+        meters /
+        metersPerDegreeLongitude;
+
+
+    const centerPoint =
+        map.latLngToContainerPoint(
+            [lat, lng]
+        );
+
+
+    const edgePoint =
+        map.latLngToContainerPoint(
+            [
+                lat,
+                lng +
+                longitudeOffset
+            ]
+        );
+
+
+    return Math.abs(
+        edgePoint.x -
+        centerPoint.x
+    );
+
+}
+
+
+/* =========================================================
+   DRAW FOG
+========================================================= */
+
+function drawFog() {
+
+    if (!map) {
+        return;
+    }
+
+
+    const width =
+        window.innerWidth;
+
+    const height =
+        window.innerHeight;
+
+
+    /*
+        Reset composition.
+    */
+
+    fogContext
+        .globalCompositeOperation =
+            "source-over";
+
+
+    fogContext.clearRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+
+    /*
+        Black translucent fog.
+    */
+
+    fogContext.fillStyle =
+        "rgba(0, 0, 0, 0.90)";
+
+
+    fogContext.fillRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+
+    /*
+        Everything drawn now
+        CUTS holes from the fog.
+    */
+
+    fogContext
+        .globalCompositeOperation =
+            "destination-out";
+
+
+    /*
+        =================================
+        PERMANENTLY EXPLORED AREAS
+        =================================
+    */
+
+    for (
+        let i = 0;
+        i < exploredZones.length;
+        i++
+    ) {
+
+        const zone =
+            exploredZones[i];
+
+
+        drawVisibilityHole(
+
+            zone.lat,
+
+            zone.lng,
+
+            zone.radius,
+
+            false
+
+        );
+
+    }
+
+
+    /*
+        =================================
+        CURRENT PLAYER VISION
+        =================================
+    */
+
+    if (currentPosition) {
+
+        const radius =
+            getCurrentVisionRadius();
+
+
+        /*
+            Radius 0:
+
+            create only tiny
+            visual hole under player.
+        */
+
+        if (radius <= 0) {
+
+            drawTinyPlayerHole(
+
+                currentPosition.lat,
+
+                currentPosition.lng
+
+            );
+
+        }
+        else {
+
+            drawVisibilityHole(
+
+                currentPosition.lat,
+
+                currentPosition.lng,
+
+                radius,
+
+                true
+
+            );
+
+        }
+
+    }
+
+
+    /*
+        Restore normal drawing.
+    */
+
+    fogContext
+        .globalCompositeOperation =
+            "source-over";
+
+}
+
+
+/* =========================================================
+   DRAW VISIBILITY CIRCLE
+========================================================= */
+
+function drawVisibilityHole(
+    lat,
+    lng,
+    radiusMeters,
+    current
+) {
+
+    const point =
+        map.latLngToContainerPoint(
+            [lat, lng]
+        );
+
+    const radiusPixels =
+        metersToPixels(
+            lat,
+            lng,
+            radiusMeters
+        );
+
+    /*
+        Не малюємо кола, які повністю
+        знаходяться за межами екрана.
+    */
+
+    if (
+        point.x + radiusPixels < 0 ||
+        point.y + radiusPixels < 0 ||
+        point.x - radiusPixels > window.innerWidth ||
+        point.y - radiusPixels > window.innerHeight
+    ) {
+        return;
+    }
+
+    /*
+        Простий прозорий отвір у тумані.
+        Без градієнта, кольорових зон
+        або напівпрозорого краю.
+    */
+
+    fogContext.fillStyle =
+        "rgba(0,0,0,1)";
+
+    fogContext.beginPath();
+
+    fogContext.arc(
+        point.x,
+        point.y,
+        radiusPixels,
+        0,
+        Math.PI * 2
+    );
+
+    fogContext.fill();
+}
+
+
+/* =========================================================
+   NIGHT CITY — RADIUS 0
+========================================================= */
+
+function drawTinyPlayerHole(
+    lat,
+    lng
+) {
+
+    const point =
+        map.latLngToContainerPoint(
+            [lat, lng]
+        );
+
+
+    /*
+        Tiny opening around
+        player's marker.
+
+        Game logic radius remains 0 m.
+    */
+
+    const radius =
+        8;
+
+
+    fogContext.beginPath();
+
+    fogContext.arc(
+
+        point.x,
+
+        point.y,
+
+        radius,
+
+        0,
+
+        Math.PI * 2
+
+    );
+
+    fogContext.fill();
+
+}
+
+
+/* =========================================================
+   SPEED
+========================================================= */
+
+function calculateSpeed(
+    position
+) {
+
+    /*
+        Native GPS speed,
+        if provided.
+    */
+
+    if (
+        position.coords.speed !== null &&
+        position.coords.speed >= 0
+    ) {
+
+        previousPosition =
+            position;
+
+        return (
+            position.coords.speed *
+            3.6
+        );
+
+    }
+
+
+    /*
+        Calculate manually.
+    */
+
+    if (!previousPosition) {
+
+        previousPosition =
+            position;
+
+        return 0;
+
+    }
+
+
+    const distance =
+        getDistance(
+
+            previousPosition
+                .coords
+                .latitude,
+
+            previousPosition
+                .coords
+                .longitude,
+
+            position
+                .coords
+                .latitude,
+
+            position
+                .coords
+                .longitude
+
+        );
+
+
+    const timeDifference =
+
+        (
+            position.timestamp -
+            previousPosition.timestamp
+        ) / 1000;
+
+
+    previousPosition =
+        position;
+
+
+    if (
+        timeDifference <= 0
+    ) {
+
+        return 0;
+
+    }
+
+
+    let speed =
+        (
+            distance /
+            timeDifference
+        ) * 3.6;
+
+
+    /*
+        Remove small GPS drift.
+    */
+
+    if (speed < 1) {
+
+        speed = 0;
+
+    }
+
+
+    return speed;
+
+}
+
+
+/* =========================================================
+   HAVERSINE DISTANCE
+========================================================= */
+
+/*
+    Returns distance in METERS
+    between two GPS coordinates.
+*/
+
+function getDistance(
+    lat1,
+    lon1,
+    lat2,
+    lon2
+) {
+
+    const earthRadius =
+        6371000;
+
+
+    const toRadians =
+        value =>
+            value *
+            Math.PI /
+            180;
+
+
+    const dLat =
+        toRadians(
+            lat2 - lat1
+        );
+
+
+    const dLon =
+        toRadians(
+            lon2 - lon1
+        );
+
+
+    const a =
+
+        Math.sin(
+            dLat / 2
+        ) *
+
+        Math.sin(
+            dLat / 2
+        )
+
+        +
+
+        Math.cos(
+            toRadians(lat1)
+        ) *
+
+        Math.cos(
+            toRadians(lat2)
+        ) *
+
+        Math.sin(
+            dLon / 2
+        ) *
+
+        Math.sin(
+            dLon / 2
+        );
+
+
+    const c =
+        2 *
+        Math.atan2(
+
+            Math.sqrt(a),
+
+            Math.sqrt(1 - a)
+
+        );
+
+
+    return (
+        earthRadius *
+        c
+    );
+
+}
+
+
+/* =========================================================
+   GPS ERROR
+========================================================= */
+
+function handleGPSError(
+    error
+) {
+
+    let message =
+        "Помилка GPS";
+
+
+    switch (
+        error.code
+    ) {
+
+        case error.PERMISSION_DENIED:
+
+            message =
+                "Немає дозволу на геолокацію";
+
+            break;
+
+
+        case error.POSITION_UNAVAILABLE:
+
+            message =
+                "GPS-позиція недоступна";
+
+            break;
+
+
+        case error.TIMEOUT:
+
+            message =
+                "GPS не відповідає";
+
+            break;
+
+    }
+
+
+    gpsStatus.textContent =
+        message;
+
+}
+
+
+/* =========================================================
+   WINDOW RESIZE
+========================================================= */
+
+window.addEventListener(
+    "resize",
+    function () {
+
+        resizeFogCanvas();
+
+        if (map) {
+
+            map.invalidateSize();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   TIME CHECK
+========================================================= */
+
+/*
+    Time can change while game
+    remains open.
+
+    Check once per minute.
+*/
+
+setInterval(
+    function () {
+
+        updateHUD();
+
+        drawFog();
+
+    },
+    60000
+);
+
+
+/* =========================================================
+   INIT
+========================================================= */
+
+/*
+   IMPORTANT:
+   Do not call checkLogin() here.
+   New game systems are declared below with let/const. Calling startGame()
+   before those declarations are initialized can throw a TDZ ReferenceError
+   for returning players and leave a black screen.
+   Boot is deferred until the whole document and all scripts are parsed.
+*/
+
+
+
+/* =========================================================
+   SURVIVAL — thirst based on real elapsed time + GPS activity
+========================================================= */
+const SURVIVAL_STORAGE_KEY = "geoGameSurvivalV1";
+const THIRST_IDLE_HOURS = 72;
+const THIRST_WALK_HOURS = 36;
+const THIRST_FAST_HOURS = 54; // >15 km/h: bicycle/car assumption
+
+let survivalState = loadSurvivalState();
+let survivalCurrentSpeedKmh = 0;
+
+function loadSurvivalState() {
+    const now = Date.now();
+    try {
+        const saved = JSON.parse(localStorage.getItem(SURVIVAL_STORAGE_KEY) || "{}");
+        return {
+            thirst: Number.isFinite(Number(saved.thirst)) ? Math.max(0, Math.min(100, Number(saved.thirst))) : 100,
+            lastUpdate: Number(saved.lastUpdate) || now,
+            hunger: Number.isFinite(Number(saved.hunger)) ? Math.max(0, Math.min(100, Number(saved.hunger))) : 100,
+            hungerLastUpdate: Number(saved.hungerLastUpdate) || now,
+            health: Number.isFinite(Number(saved.health)) ? Math.max(0, Math.min(100, Number(saved.health))) : 100,
+            healthLastUpdate: Number(saved.healthLastUpdate) || now,
+            stationarySince: Number(saved.stationarySince) || now
+        };
+    } catch (_) {
+        return { thirst:100, lastUpdate:now, hunger:100, hungerLastUpdate:now };
+    }
+}
+
+function saveSurvivalState() {
+    localStorage.setItem(SURVIVAL_STORAGE_KEY, JSON.stringify(survivalState));
+}
+
+function getThirstMode(speedKmh = survivalCurrentSpeedKmh) {
+    if (speedKmh > 15) return { key:"fast", label:"транспорт / велосипед", hours:THIRST_FAST_HOURS };
+    if (speedKmh >= 1.5) return { key:"walk", label:"ходьба", hours:THIRST_WALK_HOURS };
+    return { key:"idle", label:"спокій", hours:THIRST_IDLE_HOURS };
+}
+
+function updateSurvivalThirst(speedKmh = survivalCurrentSpeedKmh) {
+    const now = Date.now();
+    const elapsedMs = Math.max(0, Math.min(now - survivalState.lastUpdate, 7 * 24 * 3600 * 1000));
+    const elapsedHours = elapsedMs / 3600000;
+
+    // Time while the app was closed is conservatively treated as rest.
+    // Live GPS movement changes the rate while the game is open.
+    const mode = getThirstMode(speedKmh);
+    const carry = getActiveCarrySystem();
+    let multiplier = 1;
+    if (speedKmh >= 1.5) {
+        if (carry.id === "bicycle") multiplier = 1.35;
+        else if (carry.id === "cart") multiplier = 1.50;
+        else if (carry.id === "car") multiplier = 0.80;
+    }
+    const drainPerHour = (100 / mode.hours) * multiplier;
+    survivalState.thirst = Math.max(0, survivalState.thirst - elapsedHours * drainPerHour);
+    survivalState.lastUpdate = now;
+    saveSurvivalState();
+    renderSurvivalHUD();
+}
+
+function drinkWaterItem() {
+    const index = inventory.findIndex(item =>
+        item && (item.id === "water" || String(item.name || "").toLowerCase() === "вода")
+    );
+    if (index < 0) {
+        showGameMessage("У тебе немає води.", "error");
+        return;
+    }
+    inventory.splice(index, 1);
+    survivalState.thirst = Math.min(100, survivalState.thirst + 35);
+    survivalState.lastUpdate = Date.now();
+    saveInventory();
+    saveSurvivalState();
+    updateInventoryUI();
+    renderSurvivalHUD();
+    showGameMessage("💧 Ти випив воду.", "success");
+}
+
+function renderSurvivalHUD() {
+    const value = document.getElementById("thirstValue");
+    const fill = document.getElementById("thirstFill");
+    const modeEl = document.getElementById("thirstMode");
+    if (!value || !fill) return;
+    const pct = Math.max(0, Math.min(100, survivalState.thirst));
+    value.textContent = `${Math.round(pct)}%`;
+    fill.style.width = `${pct}%`;
+    if (modeEl) modeEl.textContent = getThirstMode().label;
+}
+
+setInterval(() => updateSurvivalThirst(survivalCurrentSpeedKmh), 30000);
+window.addEventListener("beforeunload", () => updateSurvivalThirst(survivalCurrentSpeedKmh));
+
+
+
+updateSurvivalThirst(0);
+renderSurvivalHUD();
+
+
+/* =========================================================
+   SURVIVAL — hunger based on elapsed time + GPS activity
+========================================================= */
+const HUNGER_FULL_HOURS_IDLE = 120; // 5 days at rest from 100% to 0%
+const HUNGER_FULL_HOURS_WALK = 72;  // walking consumes energy faster
+const HUNGER_FULL_HOURS_FAST = 96;  // >15 km/h: bike/car mixed assumption
+
+if (!Number.isFinite(Number(survivalState.hunger))) {
+    survivalState.hunger = 100;
+}
+if (!Number(survivalState.hungerLastUpdate)) {
+    survivalState.hungerLastUpdate = Date.now();
+}
+
+function getHungerMode(speedKmh = survivalCurrentSpeedKmh) {
+    if (speedKmh > 15) {
+        return { key:"fast", hours:HUNGER_FULL_HOURS_FAST };
+    }
+    if (speedKmh >= 1.5) {
+        return { key:"walk", hours:HUNGER_FULL_HOURS_WALK };
+    }
+    return { key:"idle", hours:HUNGER_FULL_HOURS_IDLE };
+}
+
+function updateSurvivalHunger(speedKmh = survivalCurrentSpeedKmh) {
+    const now = Date.now();
+    const last = Number(survivalState.hungerLastUpdate) || now;
+    const elapsedMs = Math.max(0, Math.min(now - last, 7 * 24 * 3600 * 1000));
+    const elapsedHours = elapsedMs / 3600000;
+
+    const mode = getHungerMode(speedKmh);
+    const drainPerHour = 100 / mode.hours;
+
+    survivalState.hunger = Math.max(
+        0,
+        Math.min(100, Number(survivalState.hunger ?? 100) - elapsedHours * drainPerHour)
+    );
+    survivalState.hungerLastUpdate = now;
+
+    saveSurvivalState();
+    renderHungerHUD();
+}
+
+function renderHungerHUD() {
+    const value = document.getElementById("hungerValue");
+    const fill = document.getElementById("hungerFill");
+    if (!value || !fill) return;
+
+    const pct = Math.max(0, Math.min(100, Number(survivalState.hunger ?? 100)));
+    value.textContent = `${Math.round(pct)}%`;
+    fill.style.width = `${pct}%`;
+}
+
+function isFoodItem(item) {
+    if (!item) return false;
+    const id = String(item.id || "").toLowerCase();
+    const name = String(item.name || "").trim().toLowerCase();
+    return id === "food" || name === "їжа";
+}
+
+function eatFoodFromInventoryIndex(index) {
+    const item = inventory[index];
+    if (!isFoodItem(item)) return;
+
+    updateSurvivalHunger(survivalCurrentSpeedKmh);
+
+    if (survivalState.hunger >= 99.9) {
+        showGameMessage("Ти не голодний.", "error");
+        return;
+    }
+
+    inventory.splice(index, 1);
+    survivalState.hunger = Math.min(100, survivalState.hunger + 30);
+    survivalState.hungerLastUpdate = Date.now();
+
+    saveInventory();
+    saveSurvivalState();
+    updateInventoryUI();
+    renderHungerHUD();
+    closeInventoryItemActions();
+
+    showGameMessage("🥫 Ти поїв.", "success");
+}
+
+setInterval(() => updateSurvivalHunger(survivalCurrentSpeedKmh), 30000);
+window.addEventListener("beforeunload", () =>
+    updateSurvivalHunger(survivalCurrentSpeedKmh)
+);
+
+
+updateSurvivalHunger(0);
+renderHungerHUD();
+
+
+/* =========================================================
+   HEALTH + REST
+   Thirst at 0 damages HP quickly; hunger at 0 much slower.
+   Staying nearly stationary for 30 min starts recovery.
+========================================================= */
+const REST_START_MINUTES = 30;
+const REST_HEAL_PER_HOUR = 5;
+const DEHYDRATION_DAMAGE_PER_HOUR = 5;
+const STARVATION_DAMAGE_PER_HOUR = 1;
+
+function renderHealthHUD() {
+    const hp = document.getElementById("hp");
+    const fill = document.querySelector(".hp-fill");
+    const value = Math.max(0, Math.min(100, Number(survivalState.health ?? 100)));
+    if (hp) hp.textContent = Math.round(value);
+    if (fill) fill.style.width = `${value}%`;
+}
+
+function updateHealthAndRest(speedKmh = survivalCurrentSpeedKmh) {
+    const now = Date.now();
+    const last = Number(survivalState.healthLastUpdate) || now;
+    const elapsedHours = Math.max(0, Math.min(now - last, 3600000)) / 3600000;
+
+    if (!Number.isFinite(Number(survivalState.health))) survivalState.health = 100;
+    if (!Number(survivalState.stationarySince)) survivalState.stationarySince = now;
+
+    if (speedKmh < 1.5) {
+        // remains resting
+    } else {
+        survivalState.stationarySince = now;
+    }
+
+    let delta = 0;
+    if (Number(survivalState.thirst) <= 0) delta -= DEHYDRATION_DAMAGE_PER_HOUR * elapsedHours;
+    if (Number(survivalState.hunger) <= 0) delta -= STARVATION_DAMAGE_PER_HOUR * elapsedHours;
+
+    const stationaryMinutes = (now - survivalState.stationarySince) / 60000;
+    const canRecover =
+        stationaryMinutes >= REST_START_MINUTES &&
+        Number(survivalState.thirst) > 20 &&
+        Number(survivalState.hunger) > 20 &&
+        delta >= 0;
+
+    if (canRecover && survivalState.health < 100) {
+        delta += REST_HEAL_PER_HOUR * elapsedHours;
+    }
+
+    survivalState.health = Math.max(0, Math.min(100, survivalState.health + delta));
+    survivalState.healthLastUpdate = now;
+    saveSurvivalState();
+    renderHealthHUD();
+}
+
+setInterval(() => updateHealthAndRest(survivalCurrentSpeedKmh), 30000);
+
+
+
+setTimeout(() => {
+    if (strandedCar && typeof map !== "undefined" && map) createStrandedCarMarker();
+}, 500);
+
+
+/* =========================================================
+   REAL TREE / WOOD DETECTION FOR FIREWOOD
+   Firewood can be chopped anywhere there are mapped trees:
+   natural=tree, natural=tree_row, natural=wood, landuse=forest.
+========================================================= */
+const TREE_INTERACTION_RADIUS = 30;
+const TREE_RECHECK_DISTANCE = 35;
+const TREE_CACHE_RADIUS = 450;
+
+let nearbyTreeFeatures = [];
+let lastTreeCheckPoint = null;
+let treeCheckBusy = false;
+let canChopNearTrees = false;
+
+function pointToSegmentDistanceMeters(p, a, b) {
+    const lat0 = p.lat * Math.PI / 180;
+    const kx = 111320 * Math.cos(lat0);
+    const ky = 110540;
+    const px = p.lng * kx, py = p.lat * ky;
+    const ax = a.lng * kx, ay = a.lat * ky;
+    const bx = b.lng * kx, by = b.lat * ky;
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx*dx + dy*dy;
+    let t = len2 ? ((px-ax)*dx + (py-ay)*dy)/len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px-(ax+t*dx), py-(ay+t*dy));
+}
+
+function pointInLatLngRing(point, ring) {
+    let inside = false;
+    for (let i=0, j=ring.length-1; i<ring.length; j=i++) {
+        const xi=ring[i].lng, yi=ring[i].lat;
+        const xj=ring[j].lng, yj=ring[j].lat;
+        const intersect = ((yi > point.lat) !== (yj > point.lat)) &&
+            (point.lng < (xj-xi)*(point.lat-yi)/((yj-yi)||1e-12)+xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
+function distanceToTreeFeature(point, feature) {
+    if (feature.kind === "point") {
+        return getDistance(point.lat, point.lng, feature.lat, feature.lng);
+    }
+    const ring = feature.ring || [];
+    if (!ring.length) return Infinity;
+    if (feature.closed && pointInLatLngRing(point, ring)) return 0;
+    let best = Infinity;
+    for (let i=1; i<ring.length; i++) {
+        best = Math.min(best, pointToSegmentDistanceMeters(point, ring[i-1], ring[i]));
+    }
+    if (feature.closed && ring.length > 2) {
+        best = Math.min(best, pointToSegmentDistanceMeters(point, ring[ring.length-1], ring[0]));
+    }
+    return best;
+}
+
+function updateChopWoodAvailability() {
+    const btn = document.getElementById("chopWoodBtn");
+    if (!btn) return;
+    const hasAxe = inventory.some(item =>
+        String(item.id || "").toLowerCase().includes("axe") ||
+        String(item.name || "").toLowerCase().includes("сокир")
+    );
+    const allowed = canChopNearTrees && hasAxe;
+    btn.style.display = allowed ? "" : "none";
+    btn.disabled = !allowed;
+}
+
+async function refreshNearbyTrees(lat, lng, force=false) {
+    const p = {lat:Number(lat), lng:Number(lng)};
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) return;
+
+    if (!force && lastTreeCheckPoint &&
+        getDistance(lastTreeCheckPoint.lat,lastTreeCheckPoint.lng,p.lat,p.lng) < TREE_RECHECK_DISTANCE) {
+        canChopNearTrees = nearbyTreeFeatures.some(f => distanceToTreeFeature(p,f) <= TREE_INTERACTION_RADIUS);
+        updateChopWoodAvailability();
+        return;
+    }
+    if (treeCheckBusy) return;
+    treeCheckBusy = true;
+
+    const query = `[out:json][timeout:12];
+(
+  node["natural"="tree"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  way["natural"="tree_row"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  way["natural"="wood"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  relation["natural"="wood"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  way["landuse"="forest"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  relation["landuse"="forest"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+);
+out geom;`;
+
+    const servers = [
+        "https://overpass-api.de/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter",
+        "https://overpass.nchc.org.tw/api/interpreter"
+    ];
+
+    try {
+        let data = null;
+        for (const server of servers) {
+            try {
+                const response = await fetch(server, {
+                    method:"POST",
+                    headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
+                    body:"data="+encodeURIComponent(query)
+                });
+                if (!response.ok) continue;
+                data = await response.json();
+                if (data) break;
+            } catch (_) {}
+        }
+        if (!data) throw new Error("Overpass unavailable");
+
+        const features = [];
+        for (const el of (data.elements || [])) {
+            if (el.type === "node" && el.tags?.natural === "tree") {
+                features.push({kind:"point",lat:Number(el.lat),lng:Number(el.lon)});
+            } else if (Array.isArray(el.geometry) && el.geometry.length >= 2) {
+                const ring = el.geometry.map(g => ({lat:Number(g.lat),lng:Number(g.lon)}));
+                const closed = el.tags?.natural === "wood" || el.tags?.landuse === "forest";
+                features.push({kind:"line",ring,closed});
+            }
+        }
+        nearbyTreeFeatures = features;
+        lastTreeCheckPoint = p;
+        canChopNearTrees = features.some(f => distanceToTreeFeature(p,f) <= TREE_INTERACTION_RADIUS);
+    } catch (_) {
+        // Do not falsely allow chopping when tree data cannot be confirmed.
+        canChopNearTrees = false;
+    } finally {
+        treeCheckBusy = false;
+        updateChopWoodAvailability();
+    }
+}
+
+function canChopWoodHere() {
+    return canChopNearTrees;
+}
+
+
+
+/* =========================================================
+   REAL WATER — collect drinking water + fishing
+   OSM: natural=water, waterway=river/stream/canal, natural=spring
+========================================================= */
+const WATER_INTERACTION_RADIUS = 25;
+const WATER_RECHECK_DISTANCE = 35;
+const WATER_CACHE_RADIUS = 500;
+const FISH_COOLDOWN_MS = 5 * 60 * 1000;
+const FISH_CATCH_CHANCE = 0.45;
+
+let nearbyWaterFeatures = [];
+let lastWaterCheckPoint = null;
+let waterCheckBusy = false;
+let canUseNearbyWater = false;
+let lastFishingAt = Number(localStorage.getItem("geoGameLastFishingV1") || 0);
+
+function distanceToWaterFeature(point, feature) {
+    if (feature.kind === "point") {
+        return getDistance(point.lat, point.lng, feature.lat, feature.lng);
+    }
+    const ring = feature.ring || [];
+    if (!ring.length) return Infinity;
+    if (feature.closed && pointInLatLngRing(point, ring)) return 0;
+    let best = Infinity;
+    for (let i=1; i<ring.length; i++) {
+        best = Math.min(best, pointToSegmentDistanceMeters(point, ring[i-1], ring[i]));
+    }
+    if (feature.closed && ring.length > 2) {
+        best = Math.min(best, pointToSegmentDistanceMeters(point, ring[ring.length-1], ring[0]));
+    }
+    return best;
+}
+
+function updateWaterActionsAvailability() {
+    const collectBtn = document.getElementById("collectWaterBtn");
+    const fishBtn = document.getElementById("fishBtn");
+    if (collectBtn) {
+        collectBtn.style.display = canUseNearbyWater ? "" : "none";
+        collectBtn.disabled = !canUseNearbyWater;
+    }
+    if (fishBtn) {
+        fishBtn.style.display = canUseNearbyWater ? "" : "none";
+        fishBtn.disabled = !canUseNearbyWater;
+    }
+}
+
+async function refreshNearbyWater(lat, lng, force=false) {
+    const p = {lat:Number(lat), lng:Number(lng)};
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) return;
+
+    if (!force && lastWaterCheckPoint &&
+        getDistance(lastWaterCheckPoint.lat,lastWaterCheckPoint.lng,p.lat,p.lng) < WATER_RECHECK_DISTANCE) {
+        canUseNearbyWater = nearbyWaterFeatures.some(f =>
+            distanceToWaterFeature(p,f) <= WATER_INTERACTION_RADIUS
+        );
+        updateWaterActionsAvailability();
+        return;
+    }
+    if (waterCheckBusy) return;
+    waterCheckBusy = true;
+
+    const query = `[out:json][timeout:12];
+(
+  node["natural"="spring"](around:${WATER_CACHE_RADIUS},${p.lat},${p.lng});
+  way["natural"="water"](around:${WATER_CACHE_RADIUS},${p.lat},${p.lng});
+  relation["natural"="water"](around:${WATER_CACHE_RADIUS},${p.lat},${p.lng});
+  way["waterway"~"^(river|stream|canal)$"](around:${WATER_CACHE_RADIUS},${p.lat},${p.lng});
+  relation["waterway"="riverbank"](around:${WATER_CACHE_RADIUS},${p.lat},${p.lng});
+);
+out geom;`;
+
+    const servers = [
+        "https://overpass-api.de/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter",
+        "https://overpass.nchc.org.tw/api/interpreter"
+    ];
+
+    try {
+        let data = null;
+        for (const server of servers) {
+            try {
+                const response = await fetch(server, {
+                    method:"POST",
+                    headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
+                    body:"data="+encodeURIComponent(query)
+                });
+                if (!response.ok) continue;
+                data = await response.json();
+                if (data) break;
+            } catch (_) {}
+        }
+        if (!data) throw new Error("Overpass unavailable");
+
+        const features = [];
+        for (const el of (data.elements || [])) {
+            if (el.type === "node" && el.tags?.natural === "spring") {
+                features.push({kind:"point",lat:Number(el.lat),lng:Number(el.lon)});
+            } else if (Array.isArray(el.geometry) && el.geometry.length >= 2) {
+                const ring = el.geometry.map(g => ({lat:Number(g.lat),lng:Number(g.lon)}));
+                const closed = el.tags?.natural === "water" || el.tags?.waterway === "riverbank";
+                features.push({kind:"line",ring,closed});
+            }
+        }
+        nearbyWaterFeatures = features;
+        lastWaterCheckPoint = p;
+        canUseNearbyWater = features.some(f =>
+            distanceToWaterFeature(p,f) <= WATER_INTERACTION_RADIUS
+        );
+    } catch (_) {
+        canUseNearbyWater = false;
+    } finally {
+        waterCheckBusy = false;
+        updateWaterActionsAvailability();
+    }
+}
+
+function canUseWaterHere() {
+    return canUseNearbyWater;
+}
+
+function collectNaturalWater() {
+    if (!canUseWaterHere()) {
+        showGameMessage("💧 Підійди ближче до водойми.", "error");
+        return;
+    }
+    const item = {
+        id:"water",
+        name:"Вода",
+        icon:"💧",
+        weight:1.0,
+        volume:1.0,
+        external:false
+    };
+    if (!canAddItem(item.weight, item.volume)) {
+        showGameMessage("У твоєму інвентарі немає місця для води.", "error");
+        return;
+    }
+    addItem(item);
+    updateInventoryUI();
+    showGameMessage("💧 Набрано 1 л води.", "success");
+}
+
+function fishAtNaturalWater() {
+    if (!canUseWaterHere()) {
+        showGameMessage("🎣 Підійди ближче до водойми.", "error");
+        return;
+    }
+
+    const now = Date.now();
+    const remaining = FISH_COOLDOWN_MS - (now - lastFishingAt);
+    if (remaining > 0) {
+        showGameMessage(`🎣 Спробуй ще раз через ${Math.ceil(remaining/60000)} хв.`, "error");
+        return;
+    }
+
+    lastFishingAt = now;
+    localStorage.setItem("geoGameLastFishingV1", String(now));
+
+    if (Math.random() > FISH_CATCH_CHANCE) {
+        showGameMessage("🎣 Цього разу нічого не спіймалось.", "error");
+        return;
+    }
+
+    const fish = {
+        id:"raw_fish",
+        name:"Сира риба",
+        icon:"🐟",
+        weight:0.7,
+        volume:1.0,
+        external:false
+    };
+    if (!canAddItem(fish.weight, fish.volume)) {
+        showGameMessage("🐟 Риба є, але в інвентарі немає місця.", "error");
+        return;
+    }
+    addItem(fish);
+    updateInventoryUI();
+    showGameMessage("🐟 Ти спіймав рибу!", "success");
+}
+
+
+
+/* =========================================================
+   VISIBLE SPECIAL-BUILDING MAP ICONS
+   Uses the already classified OSM building cache.
+========================================================= */
+let specialBuildingIconLayer = null;
+const SPECIAL_BUILDING_ICONS = {
+    medical: "✚",
+    shop: "🛒",
+    service: "🔧",
+    fuel: "⛽",
+    food: "🍴",
+    mall: "🏬",
+    base: "🏠"
+};
+
+function buildingCenter(ring) {
+    if (!Array.isArray(ring) || !ring.length) return null;
+    let lat = 0, lng = 0, n = 0;
+    for (const p of ring) {
+        const a = Number(p.lat ?? p[0]);
+        const b = Number(p.lng ?? p.lon ?? p[1]);
+        if (Number.isFinite(a) && Number.isFinite(b)) {
+            lat += a; lng += b; n++;
+        }
+    }
+    return n ? {lat:lat/n, lng:lng/n} : null;
+}
+
+function getSpecialBuildingType(record) {
+    if (!record) return null;
+    const state = record.state || {};
+    if (state.isBase || record.isBase || record.type === "base") return "base";
+    const t = String(record.type || record.buildingType || record.poi?.type || "").toLowerCase();
+    if (SPECIAL_BUILDING_ICONS[t]) return t;
+
+    const tags = Object.assign({}, record.tags || {}, record.poi?.tags || {});
+    const amenity = String(tags.amenity || "").toLowerCase();
+    const healthcare = String(tags.healthcare || "").toLowerCase();
+    const shop = String(tags.shop || "").toLowerCase();
+    const building = String(tags.building || "").toLowerCase();
+    const name = String(tags.name || "").toLowerCase();
+
+    if (["pharmacy","hospital","clinic","doctors"].includes(amenity) ||
+        ["pharmacy","hospital","clinic","doctor","doctors"].includes(healthcare)) return "medical";
+    if (amenity === "fuel" || shop === "fuel") return "fuel";
+    if (["car_repair","tyres","car_parts","motorcycle_repair"].includes(shop) ||
+        amenity === "vehicle_inspection") return "service";
+    if (["restaurant","cafe","fast_food","food_court","bar","pub"].includes(amenity)) return "food";
+    if (["mall","department_store"].includes(shop) || building === "retail" ||
+        name.includes("ашан") || name.includes("auchan") ||
+        name.includes("епіцентр") || name.includes("epicentr")) return "mall";
+    if (["supermarket","convenience","grocery","general","greengrocer","bakery","butcher","deli","beverages","alcohol"].includes(shop)) return "shop";
+    return null;
+}
+
+function isBuildingDepleted(record) {
+    const s = record?.state || record || {};
+    if (s.isBase || record?.isBase) return false;
+    if (s.depleted === true || s.looted === true || s.searched === true && s.empty === true) return true;
+    if (Array.isArray(s.slots) && s.generatedLoot === true) return s.slots.every(x => !x);
+    return false;
+}
+
+function makeSpecialBuildingDivIcon(symbol, depleted=false) {
+    const shown = depleted ? "📭" : symbol;
+    return L.divIcon({
+        className: "special-building-marker-wrap",
+        html: `<div class="special-building-marker ${depleted ? "depleted" : ""}">${shown}</div>`,
+        iconSize: [30,30],
+        iconAnchor: [15,15]
+    });
+}
+
+function refreshSpecialBuildingMarkers() {
+    if (typeof map === "undefined" || !map) return;
+    if (!specialBuildingIconLayer) specialBuildingIconLayer = L.layerGroup().addTo(map);
+    specialBuildingIconLayer.clearLayers();
+
+    const cache =
+        (typeof buildingCache !== "undefined" && Array.isArray(buildingCache) && buildingCache) ||
+        (typeof cachedBuildings !== "undefined" && Array.isArray(cachedBuildings) && cachedBuildings) ||
+        [];
+
+    for (const record of cache) {
+        const type = getSpecialBuildingType(record);
+        if (!type) continue; // ordinary houses remain polygons only
+        const ring = record.ring || record.geometry || record.points;
+        const center = buildingCenter(ring);
+        if (!center) continue;
+
+        const marker = L.marker([center.lat, center.lng], {
+            icon: makeSpecialBuildingDivIcon(SPECIAL_BUILDING_ICONS[type], isBuildingDepleted(record)),
+            interactive: false,
+            keyboard: false,
+            zIndexOffset: 550
+        });
+        specialBuildingIconLayer.addLayer(marker);
+    }
+
+    // Base can be stored separately from the building cache.
+    try {
+        if (typeof baseGeometry !== "undefined" && baseGeometry) {
+            const ring = baseGeometry.ring || baseGeometry.geometry || baseGeometry.points || baseGeometry;
+            const center = buildingCenter(ring);
+            if (center) {
+                specialBuildingIconLayer.addLayer(L.marker([center.lat,center.lng], {
+                    icon: makeSpecialBuildingDivIcon("🏠", false),
+                    interactive:false, keyboard:false, zIndexOffset:650
+                }));
+            }
+        }
+    } catch (_) {}
+}
+
+function scheduleSpecialBuildingMarkerRefresh() {
+    setTimeout(refreshSpecialBuildingMarkers, 0);
+}
+
+
+
+setTimeout(() => {
+    try { refreshSpecialBuildingMarkers(); } catch (_) {}
+}, 1800);
+
+
+
+function validateStrandedCarOwnership() {
+    const ownsCar = !!(carryState && Array.isArray(carryState.owned) && carryState.owned.includes("car"));
+    if (!ownsCar) {
+        strandedCar = null;
+        try { localStorage.removeItem(STRANDED_CAR_STORAGE_KEY); } catch (_) {}
+        const modal = document.getElementById("emergencyUnloadModal");
+        if (modal) modal.classList.remove("show");
+        if (strandedCarMarker && typeof map !== "undefined" && map) {
+            try { map.removeLayer(strandedCarMarker); } catch (_) {}
+            strandedCarMarker = null;
+        }
+    }
+}
+
+
+
+setTimeout(() => {
+    try { validateStrandedCarOwnership(); } catch (_) {}
+}, 0);
+
+
+
+function ensureGpsSecureContextHint() {
+    if (!window.isSecureContext && location.hostname !== "localhost") {
+        gpsStatus.textContent = "GPS потребує HTTPS";
+    }
+}
+
+
+
+setTimeout(() => {
+    try { if (!currentPosition) ensureGpsSecureContextHint(); } catch (_) {}
+}, 500);
+
+
+
+/* =========================================================
+   SAFE BOOT — must stay at the end of the main script
+========================================================= */
+function bootGeoWorld() {
+    try {
+        checkLogin();
+    } catch (error) {
+        console.error("GEO WORLD startup error:", error);
+
+        // Never leave the player with a silent black screen.
+        const login = document.getElementById("loginScreen");
+        if (login) login.classList.remove("hidden");
+
+        let box = document.getElementById("startupErrorBox");
+        if (!box) {
+            box = document.createElement("div");
+            box.id = "startupErrorBox";
+            box.style.cssText =
+                "position:fixed;left:12px;right:12px;bottom:12px;z-index:99999;" +
+                "padding:12px 14px;border-radius:12px;background:#3b1010;color:#fff;" +
+                "font:13px/1.35 Arial,sans-serif;box-shadow:0 4px 20px rgba(0,0,0,.55)";
+            document.body.appendChild(box);
+        }
+        box.textContent = "Помилка запуску гри: " + (error && error.message ? error.message : String(error));
+    }
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootGeoWorld, { once:true });
+} else {
+    bootGeoWorld();
 }
 
 </script>
@@ -129,5 +6372,6 @@ function queueNonCriticalPositionSystems(position, speedKmh) {
         <button id="finishEmergencyUnload" type="button" onclick="closeEmergencyUnload()">🎒 Взяти рюкзак і йти пішки</button>
     </div>
 </div>
+
 </body>
 </html>
