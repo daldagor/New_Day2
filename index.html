@@ -904,6 +904,18 @@
 .carry-system small { color:#aebdca; margin-top:3px; font-size:10px; }
 .carry-system strong { font-size:9px; color:#79e69b; }
 
+
+
+.building-transfer-divider {
+    height:1px; background:rgba(255,255,255,.12); margin:15px 0 12px;
+}
+.building-transfer-title {
+    font-size:12px; font-weight:900; margin-bottom:9px; color:#d7e0e8 !important;
+}
+#buildingBackpackGrid .building-loot-cell {
+    cursor:pointer;
+}
+
 </style>
 </head>
 
@@ -1473,6 +1485,12 @@ function renderBackpackGrid() {
             cell.innerHTML = '<div style="opacity:.30;font-size:24px;">＋</div>';
         }
 
+        cell.addEventListener("click", () => {
+            const lootModal = document.getElementById("buildingLootModal");
+            if (lootModal && lootModal.classList.contains("show") && activeBuildingLootRecord) {
+                moveInventoryCellToOpenBuilding(index);
+            }
+        });
         container.appendChild(cell);
     }
 }
@@ -1664,6 +1682,118 @@ document.getElementById("profileModal").addEventListener("click", (event) => {
 });
 
 updateProfileUI();
+
+
+
+/* =========================================================
+   PERSISTENT BUILDING CONTAINERS
+   Once searched, generated loot never respawns.
+   The player may later leave their own items in the building.
+========================================================= */
+
+function getBuildingState(record) {
+    if (!record || !record.id) return null;
+    const state = buildingStates[record.id] || {};
+    if (!Array.isArray(state.loot)) state.loot = [];
+    if (!Array.isArray(state.storedItems)) state.storedItems = [];
+    buildingStates[record.id] = state;
+    return state;
+}
+
+function getBuildingContainerItems(record) {
+    const state = getBuildingState(record);
+    if (!state) return [];
+    return [
+        ...state.loot.map(item => ({...item, source:"loot"})),
+        ...state.storedItems.map(item => ({...item, source:"stored"}))
+    ];
+}
+
+
+function moveInventoryCellToOpenBuilding(inventoryIndex) {
+    if (!activeBuildingLootRecord) {
+        showGameMessage("Спочатку відкрийте будівлю.", "error");
+        return;
+    }
+    putInventoryItemInBuilding(activeBuildingLootRecord, inventoryIndex);
+}
+
+function putInventoryItemInBuilding(record, inventoryIndex) {
+    if (!record || !currentPosition) return;
+
+    const distance = distanceToBuildingMeters(
+        currentPosition.lat,
+        currentPosition.lng,
+        record.ring
+    );
+
+    if (distance > BUILDING_INTERACTION_RADIUS) {
+        showGameMessage("Потрібно бути ближче до будівлі.", "error");
+        return;
+    }
+
+    const item = inventory[inventoryIndex];
+    if (!item) return;
+
+    const state = getBuildingState(record);
+    const existing = state.storedItems.find(stack =>
+        stack.id === item.id &&
+        !!stack.external === !!item.external
+    );
+
+    if (existing) {
+        existing.quantity = Number(existing.quantity || 1) + 1;
+    } else {
+        state.storedItems.push({
+            id:item.id,
+            name:item.name,
+            icon:item.icon || "📦",
+            weight:Number(item.weight || 0),
+            volume:Number(item.volume || 0),
+            external:!!item.external,
+            quantity:1
+        });
+    }
+
+    inventory.splice(inventoryIndex, 1);
+    saveInventory();
+    saveBuildingStates();
+    updateInventoryUI();
+    renderBuildingLootModal();
+    showGameMessage(`${item.icon || "📦"} ${item.name} переміщено`, "success");
+}
+
+function takeStoredBuildingItem(record, storedIndex) {
+    const state = getBuildingState(record);
+    if (!state) return;
+    const stack = state.storedItems[storedIndex];
+    if (!stack) return;
+
+    const volume = stack.external ? 0 : Number(stack.volume || 0);
+    if (!canAddItem(Number(stack.weight || 0), volume)) {
+        showGameMessage("Немає місця у поточному сховищі!", "error");
+        return;
+    }
+
+    inventory.push({
+        id:stack.id,
+        name:stack.name,
+        icon:stack.icon || "📦",
+        weight:Number(stack.weight || 0),
+        volume:Number(stack.volume || 0),
+        external:!!stack.external,
+        uid:Date.now()
+    });
+
+    stack.quantity = Number(stack.quantity || 1) - 1;
+    if (stack.quantity <= 0) state.storedItems.splice(storedIndex, 1);
+
+    saveInventory();
+    saveBuildingStates();
+    updateInventoryUI();
+    renderBuildingLootModal();
+}
+
 
 
 /* =========================================================
@@ -2954,7 +3084,7 @@ function buildBuildingPopup(record) {
 
     const title = document.createElement("div");
     title.className = "building-popup-title";
-    title.textContent = state.isBase ? "🏠 Твоя Головна База" : state.isDepleted ? "📭 Будівля порожня" : "${displayInfo.icon} Об’єкт: ${displayInfo.label}";
+    title.textContent = state.isBase ? "🏠 Твоя Головна База" : state.isDepleted ? ((state.storedItems && state.storedItems.length) ? "📦 У будівлі залишені предмети" : "📭 Будівля порожня") : "${displayInfo.icon} Об’єкт: ${displayInfo.label}";
     root.appendChild(title);
 
     const distanceEl = document.createElement("div");
@@ -3048,6 +3178,9 @@ function buildingLootRemaining(state) {
 }
 
 function openBuildingLootModal(record) {
+    const persistentState = getBuildingState(record);
+    if (!Array.isArray(persistentState.storedItems)) persistentState.storedItems = [];
+
     activeLootBuilding = record;
     renderBuildingLootModal();
     const modal = document.getElementById("buildingLootModal");
@@ -3067,6 +3200,56 @@ function setBuildingLootMessage(message, type = "") {
     const el = document.getElementById("buildingLootMessage");
     el.textContent = message || "";
     el.className = type || "";
+}
+
+
+function renderBuildingBackpackGrid(record) {
+    const grid = document.getElementById("buildingBackpackGrid");
+    if (!grid) return;
+    grid.innerHTML = "";
+
+    // Stack identical inventory items visually, same principle as backpack.
+    const groups = [];
+    inventory.forEach((item, inventoryIndex) => {
+        let group = groups.find(g =>
+            g.item.id === item.id &&
+            !!g.item.external === !!item.external
+        );
+        if (!group) {
+            group = { item, indices:[] };
+            groups.push(group);
+        }
+        group.indices.push(inventoryIndex);
+    });
+
+    groups.forEach(group => {
+        const item = group.item;
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "building-loot-cell";
+        cell.innerHTML = `
+            <div class="loot-icon">${item.icon || "📦"}</div>
+            <div class="loot-name">${item.name}</div>
+            <div class="loot-count">×${group.indices.length}</div>
+        `;
+        cell.title = "Натисніть, щоб перемістити в будівлю";
+        cell.addEventListener("click", () => {
+            // Always resolve a current index because inventory changes after each transfer.
+            const currentIndex = inventory.findIndex(inv =>
+                inv.id === item.id &&
+                !!inv.external === !!item.external
+            );
+            if (currentIndex >= 0) putInventoryItemInBuilding(record, currentIndex);
+        });
+        grid.appendChild(cell);
+    });
+
+    // Fill visually to the same 24-cell layout.
+    for (let i = groups.length; i < 24; i++) {
+        const empty = document.createElement("div");
+        empty.className = "building-loot-cell empty";
+        grid.appendChild(empty);
+    }
 }
 
 function renderBuildingLootModal() {
@@ -3112,6 +3295,27 @@ function renderBuildingLootModal() {
             "Натисніть на предмет, щоб забрати його окремо, або «Забрати все»."
         );
     }
+const persistentState = getBuildingState(activeBuildingLootRecord);
+    if (persistentState && Array.isArray(persistentState.storedItems)) {
+        const grid = document.getElementById("buildingLootGrid");
+        persistentState.storedItems.forEach((item, storedIndex) => {
+            const cell = document.createElement("button");
+            cell.type = "button";
+            cell.className = "building-loot-cell building-stored-cell";
+            cell.innerHTML = `
+                <div class="loot-icon">${item.icon || "📦"}</div>
+                <div class="loot-name">${item.name}</div>
+                <div class="loot-count">×${Number(item.quantity || 1)}</div>
+            `;
+            cell.title = "Залишено вами · натисніть, щоб забрати";
+            cell.addEventListener("click", () =>
+                takeStoredBuildingItem(activeBuildingLootRecord, storedIndex)
+            );
+            grid.appendChild(cell);
+        });
+    }
+
+    renderBuildingBackpackGrid(activeBuildingLootRecord);
 }
 
 function finalizeBuildingLootState(record, state) {
