@@ -613,7 +613,7 @@
                 id="visionInfo"
                 class="hud-chip"
             >
-                👁 50 м
+                Поточний огляд: 50 м
             </div>
 
 
@@ -1297,68 +1297,19 @@ function isNight() {
 
 function getCurrentVisionRadius() {
 
-    const night =
-        isNight();
-
-
     /*
-        DAY
+        BIOME-BASED VISIBILITY:
+
+        City  = 50 meters
+        Field = 200 meters
+
+        The radius depends strictly on the
+        currently selected biome.
     */
 
-    if (!night) {
-
-        if (
-            currentBiome ===
-            "city"
-        ) {
-
-            return 50;
-
-        }
-
-        return 200;
-
-    }
-
-
-    /*
-        NIGHT + FLASHLIGHT
-
-        Flashlight cancels
-        night penalty.
-    */
-
-    if (flashlightEnabled) {
-
-        if (
-            currentBiome ===
-            "city"
-        ) {
-
-            return 50;
-
-        }
-
-        return 200;
-
-    }
-
-
-    /*
-        NIGHT WITHOUT FLASHLIGHT
-    */
-
-    if (
-        currentBiome ===
-        "city"
-    ) {
-
-        return 0;
-
-    }
-
-
-    return 50;
+    return currentBiome === "field"
+        ? 200
+        : 50;
 
 }
 
@@ -1562,7 +1513,7 @@ function updateHUD() {
     */
 
     visionInfo.textContent =
-        "👁 " +
+        "Поточний огляд: " +
         radius +
         " м";
 
