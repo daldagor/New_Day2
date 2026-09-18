@@ -1898,6 +1898,14 @@ function consumeCarFuelByGps(position, speedKmh) {
     const acc = Number(position.coords.accuracy);
     if (!Number.isFinite(lat) || !Number.isFinite(lng) || acc > 50) return;
 
+    /*
+       Anti-GPS-jump protection for car fuel only.
+       A reported movement speed above 150 km/h is treated as an invalid
+       location jump: do not consume fuel and do not use this point as the
+       next fuel-distance anchor.
+    */
+    if (!Number.isFinite(speedKmh) || speedKmh > 150) return;
+
     if (carFuelState.liters <= 0) {
         if (speedKmh > 3 && !fuelEmptyWarned) {
             showGameMessage("⛽ У машині немає пального. Заправ її з інвентарю.", "error");
@@ -3423,10 +3431,11 @@ function scheduleBuildingLoad() {
 }
 
 /* Add one polygon once. Existing polygons are reused, never cleared. */
-function ensureBuildingRendered(id, ring) {
+function ensureBuildingRendered(id, ring, tags = {}) {
     if (!buildingLayer || !id || !Array.isArray(ring) || ring.length < 3) return null;
 
     const cached = buildingMemoryCache.get(id);
+    if (cached && tags && Object.keys(tags).length) cached.tags = {...(cached.tags || {}), ...tags};
     if (cached && cached.polygon && buildingLayer.hasLayer(cached.polygon)) {
         cached.ring = ring;
         return cached;
@@ -3450,7 +3459,7 @@ function ensureBuildingRendered(id, ring) {
         interactive:true,
         bubblingMouseEvents:false
     });
-    const record = { id, ring, polygon };
+    const record = { id, ring, polygon, tags: tags || {} };
     polygon._buildingRecord = record;
     polygon.bindPopup(() => buildBuildingPopup(record), {
         closeButton:true,
@@ -3478,7 +3487,7 @@ function ensureBuildingRendered(id, ring) {
 function renderCachedBuildings() {
     if (!buildingLayer) return;
     const cached = Array.from(buildingMemoryCache.values());
-    cached.forEach(item => ensureBuildingRendered(item.id, item.ring));
+    cached.forEach(item => ensureBuildingRendered(item.id, item.ring, item.tags || {}));
 
     scheduleSpecialBuildingMarkerRefresh();
 }
@@ -3492,12 +3501,28 @@ async function loadVisibleBuildings() {
     }
 
     const b = map.getBounds();
-    const bbox = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].join(",");
-    const query = `[out:json][timeout:18];(way["building"](${bbox});relation["building"](${bbox});
-  node["amenity"~"^(pharmacy|hospital|clinic|doctors|fuel|restaurant|cafe|fast_food|food_court|bar|pub|vehicle_inspection)$"](${south},${west},${north},${east});
-  node["healthcare"~"^(pharmacy|hospital|clinic|doctor|doctors)$"](${south},${west},${north},${east});
-  node["shop"~"^(supermarket|convenience|grocery|general|department_store|mall|greengrocer|bakery|butcher|deli|beverages|alcohol|car_repair|tyres|car_parts|motorcycle_repair|fuel)$"](${south},${west},${north},${east});
-);out geom;`;
+    const south = b.getSouth();
+    const west = b.getWest();
+    const north = b.getNorth();
+    const east = b.getEast();
+    const bbox = [south, west, north, east].join(",");
+
+    /*
+       Load every mapped building footprint in the visible area.
+       building:part is included because some OSM-rendered structures are
+       represented by parts rather than a single simple building way.
+    */
+    const query = `[out:json][timeout:18];
+(
+  way["building"](${bbox});
+  relation["building"](${bbox});
+  way["building:part"](${bbox});
+  relation["building:part"](${bbox});
+  node["amenity"~"^(pharmacy|hospital|clinic|doctors|fuel|restaurant|cafe|fast_food|food_court|bar|pub|vehicle_inspection)$"](${bbox});
+  node["healthcare"~"^(pharmacy|hospital|clinic|doctor|doctors)$"](${bbox});
+  node["shop"~"^(supermarket|convenience|grocery|general|department_store|mall|greengrocer|bakery|butcher|deli|beverages|alcohol|car_repair|tyres|car_parts|motorcycle_repair|fuel)$"](${bbox});
+);
+out geom;`;
 
     if (buildingRequestController) buildingRequestController.abort();
     buildingRequestController = new AbortController();
@@ -3559,7 +3584,7 @@ function renderOSMBuildings(elements) {
         rings.forEach((ring, index) => {
             const buildingId = `${el.type}/${el.id}${rings.length > 1 ? "/" + index : ""}`;
             if (!buildingMemoryCache.has(buildingId)) changed = true;
-            ensureBuildingRendered(buildingId, ring);
+            ensureBuildingRendered(buildingId, ring, el.tags || {});
         });
     });
 
@@ -4306,16 +4331,16 @@ function getCurrentVisionRadius() {
     /*
         BIOME-BASED VISIBILITY:
 
-        City  = 50 meters
-        Field = 200 meters
+        City  = 100 meters
+        Field = 500 meters
 
         The radius depends strictly on the
-        currently selected biome.
+        automatically detected biome.
     */
 
     return currentBiome === "field"
-        ? 200
-        : 50;
+        ? 500
+        : 100;
 
 }
 
@@ -5820,7 +5845,8 @@ setTimeout(() => {
 /* =========================================================
    REAL TREE / WOOD DETECTION FOR FIREWOOD
    Firewood can be chopped anywhere there are mapped trees:
-   natural=tree, natural=tree_row, natural=wood, landuse=forest.
+   natural=tree/tree_row/wood, landuse=forest/orchard, natural=scrub.
+   A generic leisure=park alone is NOT enough.
 ========================================================= */
 const TREE_INTERACTION_RADIUS = 30;
 const TREE_RECHECK_DISTANCE = 35;
@@ -5907,6 +5933,18 @@ async function refreshNearbyTrees(lat, lng, force=false) {
   relation["natural"="wood"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
   way["landuse"="forest"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
   relation["landuse"="forest"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+
+  /* Tree-covered urban/park polygons commonly used by OSM renderers. */
+  way["natural"="scrub"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  relation["natural"="scrub"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  way["landuse"="orchard"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  relation["landuse"="orchard"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  way["landuse"="cemetery"]["wood"="yes"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  relation["landuse"="cemetery"]["wood"="yes"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  way["leisure"="park"]["natural"="wood"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  relation["leisure"="park"]["natural"="wood"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  way["leisure"="park"]["landuse"="forest"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  relation["leisure"="park"]["landuse"="forest"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
 );
 out geom;`;
 
@@ -5938,8 +5976,15 @@ out geom;`;
                 features.push({kind:"point",lat:Number(el.lat),lng:Number(el.lon)});
             } else if (Array.isArray(el.geometry) && el.geometry.length >= 2) {
                 const ring = el.geometry.map(g => ({lat:Number(g.lat),lng:Number(g.lon)}));
-                const closed = el.tags?.natural === "wood" || el.tags?.landuse === "forest";
-                features.push({kind:"line",ring,closed});
+                const tags = el.tags || {};
+                const closed =
+                    tags.natural === "wood" ||
+                    tags.natural === "scrub" ||
+                    tags.landuse === "forest" ||
+                    tags.landuse === "orchard" ||
+                    (tags.landuse === "cemetery" && tags.wood === "yes") ||
+                    (tags.leisure === "park" && (tags.natural === "wood" || tags.landuse === "forest"));
+                features.push({kind:"line",ring,closed,tags});
             }
         }
         nearbyTreeFeatures = features;
