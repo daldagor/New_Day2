@@ -876,6 +876,30 @@ const FIREWOOD_BUNDLE = {
     weight: 10.0, volume: 15.0, external: false
 };
 
+/* Building search loot.
+   Each successful search has a 50% chance to find ONE random item:
+   water or food. The other 50% yields nothing. */
+const BUILDING_LOOT_CHANCE = 0.50;
+
+const BUILDING_LOOT_TABLE = [
+    {
+        id: "water_bottle",
+        name: "Вода",
+        icon: "💧",
+        weight: 1.0,
+        volume: 1.0,
+        external: false
+    },
+    {
+        id: "canned_food",
+        name: "Їжа",
+        icon: "🥫",
+        weight: 0.5,
+        volume: 0.5,
+        external: false
+    }
+];
+
 let inventory = [];
 
 function loadInventory() {
@@ -2097,14 +2121,61 @@ function refreshOpenBuildingPopup() {
 }
 
 function searchBuilding(record) {
-    if (getBuildingDistance(record) >= BUILDING_INTERACTION_RADIUS) return refreshOpenBuildingPopup();
+    if (getBuildingDistance(record) >= BUILDING_INTERACTION_RADIUS) {
+        return refreshOpenBuildingPopup();
+    }
+
     const state = buildingStates[record.id] || {};
     if (state.isBase || state.isDepleted) return;
+
+    /*
+        The building is depleted after ONE search regardless of loot result.
+        Loot roll:
+        - 50%: one random item from the table (water or food)
+        - 50%: nothing
+    */
+    const foundSomething = Math.random() < BUILDING_LOOT_CHANCE;
+
+    if (foundSomething) {
+        const lootTemplate =
+            BUILDING_LOOT_TABLE[
+                Math.floor(Math.random() * BUILDING_LOOT_TABLE.length)
+            ];
+
+        const loot = { ...lootTemplate };
+
+        if (canAddItem(loot.weight, loot.volume)) {
+            addItem(loot);
+            showGameMessage(
+                `Знайдено: ${loot.icon} ${loot.name}!`,
+                "success"
+            );
+        } else {
+            showGameMessage(
+                `Знайдено ${loot.icon} ${loot.name}, але немає місця в рюкзаку!`,
+                "error"
+            );
+        }
+    } else {
+        showGameMessage(
+            "Будівля порожня. Нічого корисного не знайдено.",
+            "error"
+        );
+    }
+
     state.isDepleted = true;
     buildingStates[record.id] = state;
     saveBuildingStates();
-    record.polygon.setStyle(getBuildingStyle(state));
-    record.polygon.setPopupContent(buildBuildingPopup(record));
+
+    record.polygon.setStyle(
+        getBuildingStyle(state)
+    );
+
+    record.polygon.setPopupContent(
+        buildBuildingPopup(record)
+    );
+
+    updateInventoryUI();
 }
 
 function captureBuilding(record) {
