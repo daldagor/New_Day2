@@ -1201,6 +1201,8 @@ const BIOME_SEARCH_RADIUS = 120;
 ========================================================= */
 const BUILDING_STATE_STORAGE_KEY = "geoGameBuildingStatesV1";
 const BASE_BACKUP_STORAGE_KEY = "geoGameMainBaseV1";
+const BUILDING_CACHE_STORAGE_KEY = "geoGameBuildingGeometryCacheV1";
+const BUILDING_CACHE_MAX = 1800;
 const BUILDING_INTERACTION_RADIUS = 20;
 const BASE_PROTECTION_RADIUS = 200;
 let buildingLayer = null;
@@ -1208,6 +1210,40 @@ let buildingStates = {};
 let buildingLoadTimer = null;
 let buildingRequestController = null;
 let openBuildingRecord = null;
+
+/*
+    Persistent building cache. Records live here independently from
+    Overpass requests and UI modals, so existing polygons are never
+    removed merely because a new request failed or a window closed.
+*/
+const buildingMemoryCache = new Map();
+
+function loadBuildingGeometryCache() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(BUILDING_CACHE_STORAGE_KEY) || "[]");
+        if (!Array.isArray(saved)) return;
+        saved.forEach(item => {
+            if (item && item.id && Array.isArray(item.ring) && item.ring.length >= 3) {
+                buildingMemoryCache.set(item.id, { id:item.id, ring:item.ring });
+            }
+        });
+    } catch (error) {
+        console.warn("Не вдалося прочитати кеш будівель:", error);
+    }
+}
+
+function saveBuildingGeometryCache() {
+    try {
+        const records = Array.from(buildingMemoryCache.values())
+            .slice(-BUILDING_CACHE_MAX)
+            .map(item => ({ id:item.id, ring:item.ring }));
+        localStorage.setItem(BUILDING_CACHE_STORAGE_KEY, JSON.stringify(records));
+    } catch (error) {
+        console.warn("Не вдалося зберегти кеш будівель:", error);
+    }
+}
+
+loadBuildingGeometryCache();
 
 try {
     buildingStates = JSON.parse(localStorage.getItem(BUILDING_STATE_STORAGE_KEY) || "{}") || {};
@@ -1422,6 +1458,7 @@ function initMap() {
         map.getPane("buildingsPane").style.pointerEvents = "auto";
     }
     buildingLayer = L.featureGroup().addTo(map);
+    renderCachedBuildings();
     renderSavedBaseBackup();
 
     /* Load real OSM building polygons for the visible map area. */
@@ -1761,12 +1798,70 @@ function scheduleBuildingLoad() {
     buildingLoadTimer = setTimeout(loadVisibleBuildings, 450);
 }
 
+/* Add one polygon once. Existing polygons are reused, never cleared. */
+function ensureBuildingRendered(id, ring) {
+    if (!buildingLayer || !id || !Array.isArray(ring) || ring.length < 3) return null;
+
+    const cached = buildingMemoryCache.get(id);
+    if (cached && cached.polygon && buildingLayer.hasLayer(cached.polygon)) {
+        cached.ring = ring;
+        return cached;
+    }
+
+    let existing = null;
+    buildingLayer.eachLayer(layer => {
+        if (!existing && layer._buildingRecord && layer._buildingRecord.id === id) {
+            existing = layer._buildingRecord;
+        }
+    });
+    if (existing) {
+        buildingMemoryCache.set(id, existing);
+        return existing;
+    }
+
+    const state = buildingStates[id] || {};
+    const polygon = L.polygon(ring, {
+        ...getBuildingStyle(state),
+        pane:"buildingsPane",
+        interactive:true,
+        bubblingMouseEvents:false
+    });
+    const record = { id, ring, polygon };
+    polygon._buildingRecord = record;
+    polygon.bindPopup(() => buildBuildingPopup(record), {
+        closeButton:true,
+        autoPan:true,
+        className:"game-building-popup"
+    });
+    polygon.on("click", e => {
+        L.DomEvent.stopPropagation(e);
+        openBuildingRecord = record;
+        polygon.setPopupContent(buildBuildingPopup(record));
+        polygon.openPopup(e.latlng);
+    });
+    polygon.on("popupopen", () => {
+        openBuildingRecord = record;
+        refreshOpenBuildingPopup();
+    });
+    polygon.on("popupclose", () => {
+        if (openBuildingRecord === record) openBuildingRecord = null;
+    });
+    polygon.addTo(buildingLayer);
+    buildingMemoryCache.set(id, record);
+    return record;
+}
+
+function renderCachedBuildings() {
+    if (!buildingLayer) return;
+    const cached = Array.from(buildingMemoryCache.values());
+    cached.forEach(item => ensureBuildingRendered(item.id, item.ring));
+}
+
 async function loadVisibleBuildings() {
     if (!map || map.getZoom() < 16) {
-        if (buildingLayer) {
-            buildingLayer.clearLayers();
-            renderSavedBaseBackup();
-        }
+        /* Never delete already loaded buildings when zooming out. */
+        renderCachedBuildings();
+        renderSavedBaseBackup();
         return;
     }
 
@@ -1789,10 +1884,10 @@ async function loadVisibleBuildings() {
         for (const endpoint of endpoints) {
             try {
                 const response = await fetch(endpoint, {
-                    method: "POST",
-                    headers: {"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
-                    body: "data=" + encodeURIComponent(query),
-                    signal: buildingRequestController.signal
+                    method:"POST",
+                    headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
+                    body:"data=" + encodeURIComponent(query),
+                    signal:buildingRequestController.signal
                 });
                 if (!response.ok) throw new Error("Overpass HTTP " + response.status);
                 data = await response.json();
@@ -1807,16 +1902,17 @@ async function loadVisibleBuildings() {
         renderOSMBuildings(data.elements || []);
     } catch (error) {
         if (error.name !== "AbortError") {
-            console.warn("Не вдалося завантажити будівлі OSM:", error);
+            console.warn("Не вдалося завантажити будівлі OSM, використовую локальний кеш:", error);
+            renderCachedBuildings();
             renderSavedBaseBackup();
-            showGameMessage("Не вдалося оновити будівлі. Перевірте інтернет і спробуйте ще раз.", "error");
+            showGameMessage("Overpass недоступний — використовую збережені будівлі.", "error");
         }
     }
 }
 
 function renderOSMBuildings(elements) {
     if (!buildingLayer) return;
-    buildingLayer.clearLayers();
+    let changed = false;
 
     elements.forEach(el => {
         const rings = [];
@@ -1832,23 +1928,12 @@ function renderOSMBuildings(elements) {
 
         rings.forEach((ring, index) => {
             const buildingId = `${el.type}/${el.id}${rings.length > 1 ? "/" + index : ""}`;
-            const state = buildingStates[buildingId] || {};
-            const polygon = L.polygon(ring, { ...getBuildingStyle(state), pane:"buildingsPane", interactive:true, bubblingMouseEvents:false });
-            const record = { id: buildingId, ring, polygon };
-            polygon._buildingRecord = record;
-            polygon.bindPopup(() => buildBuildingPopup(record), { closeButton:true, autoPan:true, className:"game-building-popup" });
-            polygon.on("click", (e) => {
-                L.DomEvent.stopPropagation(e);
-                openBuildingRecord = record;
-                polygon.setPopupContent(buildBuildingPopup(record));
-                polygon.openPopup(e.latlng);
-            });
-            polygon.on("popupopen", () => { openBuildingRecord = record; refreshOpenBuildingPopup(); });
-            polygon.on("popupclose", () => { if (openBuildingRecord === record) openBuildingRecord = null; });
-            polygon.addTo(buildingLayer);
+            if (!buildingMemoryCache.has(buildingId)) changed = true;
+            ensureBuildingRendered(buildingId, ring);
         });
     });
 
+    if (changed) saveBuildingGeometryCache();
     renderSavedBaseBackup();
 }
 
@@ -1868,6 +1953,8 @@ function saveBaseBackup(record) {
         lat: center.lat,
         lng: center.lng
     }));
+    buildingMemoryCache.set(record.id, record);
+    saveBuildingGeometryCache();
 }
 
 function renderSavedBaseBackup() {
@@ -1895,6 +1982,8 @@ function renderSavedBaseBackup() {
     polygon.on("popupopen", () => { openBuildingRecord = record; refreshOpenBuildingPopup(); });
     polygon.on("popupclose", () => { if (openBuildingRecord === record) openBuildingRecord = null; });
     polygon.addTo(buildingLayer);
+    buildingMemoryCache.set(record.id, record);
+    saveBuildingGeometryCache();
 }
 
 function getBuildingStyle(state) {
