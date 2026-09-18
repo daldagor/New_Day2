@@ -811,6 +811,84 @@
     }
 }
 
+
+/* ===== PROFILE ===== */
+#profileModal {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0,0,0,.74);
+    backdrop-filter: blur(9px);
+    -webkit-backdrop-filter: blur(9px);
+}
+.profile-card {
+    width: min(430px, 100%);
+    padding: 20px;
+    border-radius: 20px;
+    color: #fff;
+    background: rgba(10,16,23,.98);
+    border: 1px solid rgba(255,255,255,.16);
+    box-shadow: 0 20px 60px rgba(0,0,0,.55);
+}
+.profile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.profile-header h2 { margin: 0; font-size: 21px; }
+#closeProfile {
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 11px;
+    padding: 9px 12px;
+    color: #fff;
+    background: rgba(255,255,255,.09);
+    font-weight: 800;
+    cursor: pointer;
+}
+.profile-player {
+    margin-top: 8px;
+    color: #aebdca;
+    font-size: 13px;
+}
+.profile-distance-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 18px;
+}
+.profile-stat {
+    min-width: 0;
+    padding: 18px 10px;
+    border-radius: 16px;
+    text-align: center;
+    background: rgba(255,255,255,.065);
+    border: 1px solid rgba(255,255,255,.11);
+}
+.profile-stat-icon { font-size: 28px; }
+.profile-stat-label {
+    margin-top: 8px;
+    color: #b8c5d0;
+    font-size: 11px;
+}
+.profile-stat-value {
+    margin-top: 5px;
+    font-size: 22px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+.profile-note {
+    margin-top: 16px;
+    color: #81909e;
+    font-size: 11px;
+    line-height: 1.45;
+    text-align: center;
+}
+
 </style>
 </head>
 
@@ -882,36 +960,18 @@
             >
                 ☀️ День
             </div>
-
-
-            <div
-                id="biomeButton"
-                class="hud-chip"
-            >
-                🛰 Визначення місцевості...
-            </div>
-
-
-            <div
-                id="visionInfo"
-                class="hud-chip"
-            >
-                Поточний огляд: 50 м
-            </div>
-
-
-            <button
+<button
                 id="flashlightButton"
                 class="hud-button"
             >
                 🔦 Увімкнути
             </button>
 
-            <div id="inventoryStatus" class="hud-chip">
-                Рюкзак: 2.0 / 35.0 кг (0 / 80 л)
-            </div>
+            <button id="profileButton" class="hud-button">
+                👤 Профіль
+            </button>
 
-            <button id="inventoryButton" class="hud-button">
+<button id="inventoryButton" class="hud-button">
                 🎒 Рюкзак
             </button>
 
@@ -945,6 +1005,37 @@
         Пошук GPS...
     </div>
 
+
+
+    <!-- PROFILE MODAL -->
+    <div id="profileModal" class="hidden">
+        <div class="profile-card">
+            <div class="profile-header">
+                <h2>👤 Профіль</h2>
+                <button id="closeProfile">Закрити</button>
+            </div>
+
+            <div class="profile-player">Gamer_Gmail</div>
+
+            <div class="profile-distance-grid">
+                <div class="profile-stat">
+                    <div class="profile-stat-icon">🚶</div>
+                    <div class="profile-stat-label">Пройдено сьогодні</div>
+                    <div id="todayDistance" class="profile-stat-value">0.00 км</div>
+                </div>
+
+                <div class="profile-stat">
+                    <div class="profile-stat-icon">🌍</div>
+                    <div class="profile-stat-label">Пройдено всього</div>
+                    <div id="totalDistance" class="profile-stat-value">0.00 км</div>
+                </div>
+            </div>
+
+            <div class="profile-note">
+                Відстань зберігається на цьому пристрої та оновлюється за GPS.
+            </div>
+        </div>
+    </div>
 
     <!-- INVENTORY MODAL -->
     <div id="inventoryModal" class="hidden">
@@ -1182,7 +1273,8 @@ function updateInventoryUI() {
     const weight = getInventoryWeight();
     const volume = getInventoryVolume();
     const status = `Рюкзак: ${weight.toFixed(1)} / ${MAX_INVENTORY_WEIGHT.toFixed(1)} кг (${formatLiters(volume)} / ${formatLiters(MAX_INVENTORY_VOLUME)} л)`;
-    document.getElementById("inventoryStatus").textContent = status;
+    const inventoryStatusEl = document.getElementById("inventoryStatus");
+    if (inventoryStatusEl) inventoryStatusEl.textContent = status;
     document.getElementById("inventorySummary").textContent = status;
     document.getElementById("weightText").textContent = `${weight.toFixed(1)} / ${MAX_INVENTORY_WEIGHT.toFixed(1)} кг`;
     document.getElementById("volumeText").textContent = `${formatLiters(volume)} / ${formatLiters(MAX_INVENTORY_VOLUME)} л`;
@@ -1213,6 +1305,154 @@ document.getElementById("closeInventory").addEventListener("click", () => {
 document.getElementById("inventoryModal").addEventListener("click", e => {
     if (e.target.id === "inventoryModal") e.currentTarget.classList.add("hidden");
 });
+
+
+
+/* =========================================================
+   PROFILE / WALKED DISTANCE
+========================================================= */
+const DISTANCE_STORAGE_KEY = "geoGameDistanceStatsV1";
+let distanceStats = loadDistanceStats();
+let lastDistancePosition = null;
+
+function localDateKey(date = new Date()) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
+function loadDistanceStats() {
+    const today = localDateKey();
+    try {
+        const saved = JSON.parse(
+            localStorage.getItem(DISTANCE_STORAGE_KEY) || "{}"
+        );
+
+        return {
+            totalMeters: Math.max(0, Number(saved.totalMeters) || 0),
+            todayMeters:
+                saved.todayKey === today
+                    ? Math.max(0, Number(saved.todayMeters) || 0)
+                    : 0,
+            todayKey: today
+        };
+    } catch (_) {
+        return {
+            totalMeters: 0,
+            todayMeters: 0,
+            todayKey: today
+        };
+    }
+}
+
+function saveDistanceStats() {
+    localStorage.setItem(
+        DISTANCE_STORAGE_KEY,
+        JSON.stringify(distanceStats)
+    );
+}
+
+function ensureDistanceDay() {
+    const today = localDateKey();
+    if (distanceStats.todayKey !== today) {
+        distanceStats.todayKey = today;
+        distanceStats.todayMeters = 0;
+        saveDistanceStats();
+    }
+}
+
+function updateProfileUI() {
+    ensureDistanceDay();
+
+    const todayEl = document.getElementById("todayDistance");
+    const totalEl = document.getElementById("totalDistance");
+
+    if (todayEl) {
+        todayEl.textContent =
+            (distanceStats.todayMeters / 1000).toFixed(2) + " км";
+    }
+
+    if (totalEl) {
+        totalEl.textContent =
+            (distanceStats.totalMeters / 1000).toFixed(2) + " км";
+    }
+}
+
+function trackWalkedDistance(position) {
+    ensureDistanceDay();
+
+    const lat = Number(position.coords.latitude);
+    const lng = Number(position.coords.longitude);
+    const accuracy = Number(position.coords.accuracy);
+    const timestamp = Number(position.timestamp) || Date.now();
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+    const point = { lat, lng, accuracy, timestamp };
+
+    /*
+       Very inaccurate fixes are not used for distance accumulation.
+       This prevents large jumps when GPS is still searching.
+    */
+    if (Number.isFinite(accuracy) && accuracy > 50) {
+        return;
+    }
+
+    if (!lastDistancePosition) {
+        lastDistancePosition = point;
+        return;
+    }
+
+    const meters = getDistance(
+        lastDistancePosition.lat,
+        lastDistancePosition.lng,
+        lat,
+        lng
+    );
+
+    const seconds =
+        Math.max(
+            0.001,
+            (timestamp - lastDistancePosition.timestamp) / 1000
+        );
+
+    const metersPerSecond = meters / seconds;
+
+    /*
+       Ignore GPS jitter below 3 m and obviously impossible jumps.
+       The upper limit still allows brisk walking/running/cycling.
+    */
+    if (
+        meters >= 3 &&
+        meters <= 250 &&
+        metersPerSecond <= 15
+    ) {
+        distanceStats.totalMeters += meters;
+        distanceStats.todayMeters += meters;
+        saveDistanceStats();
+        updateProfileUI();
+    }
+
+    lastDistancePosition = point;
+}
+
+document.getElementById("profileButton").addEventListener("click", () => {
+    updateProfileUI();
+    document.getElementById("profileModal").classList.remove("hidden");
+});
+
+document.getElementById("closeProfile").addEventListener("click", () => {
+    document.getElementById("profileModal").classList.add("hidden");
+});
+
+document.getElementById("profileModal").addEventListener("click", (event) => {
+    if (event.target.id === "profileModal") {
+        event.currentTarget.classList.add("hidden");
+    }
+});
+
+updateProfileUI();
 
 
 /* =========================================================
@@ -1955,6 +2195,13 @@ function handlePosition(
         вільно гортати. Для повернення до себе
         використовується кнопка компаса.
     */
+
+
+    /*
+        PROFILE DISTANCE
+    */
+
+    trackWalkedDistance(position);
 
 
     /*
@@ -2885,7 +3132,7 @@ async function updateBiomeFromPosition(lat, lng) {
     }
 
     biomeCheckInProgress = true;
-    biomeButton.textContent = "🛰 Визначення місцевості...";
+    if (biomeButton) biomeButton.textContent = "🛰 Визначення місцевості...";
 
     try {
         const query = `[out:json][timeout:10];(
@@ -3000,9 +3247,10 @@ function updateHUD() {
         "city"
     ) {
 
-        biomeButton.textContent =
+        if (biomeButton) biomeButton.textContent =
             "🏙 Місто · авто";
 
+        biomeButton &&
         biomeButton
             .classList
             .remove(
@@ -3012,9 +3260,10 @@ function updateHUD() {
     }
     else {
 
-        biomeButton.textContent =
+        if (biomeButton) biomeButton.textContent =
             "🌾 Поле · авто";
 
+        biomeButton &&
         biomeButton
             .classList
             .add(
@@ -3028,10 +3277,12 @@ function updateHUD() {
         VISION
     */
 
-    visionInfo.textContent =
-        "Поточний огляд: " +
-        radius +
-        " м";
+    if (visionInfo) {
+        visionInfo.textContent =
+            "Поточний огляд: " +
+            radius +
+            " м";
+    }
 
 
     /*
