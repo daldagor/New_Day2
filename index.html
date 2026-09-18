@@ -515,6 +515,35 @@
             color: #718091 !important;
         }
 
+        /* =========================
+           INVENTORY
+        ========================== */
+
+        #inventoryModal {
+            position: fixed; inset: 0; z-index: 4000;
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px; background: rgba(0,0,0,0.72);
+        }
+        .inventory-card {
+            width: min(430px, 100%); max-height: 82vh; overflow: auto;
+            padding: 20px; border-radius: 18px; color: white;
+            background: rgba(10,16,23,0.97);
+            border: 1px solid rgba(255,255,255,0.16);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+        }
+        .inventory-header { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+        .inventory-header h2 { font-size: 21px; }
+        .inventory-summary { margin: 16px 0; font-size: 14px; font-weight: 800; }
+        .capacity-label { display:flex; justify-content:space-between; margin:10px 0 5px; font-size:12px; color:#cbd6df; }
+        .capacity-bar { height:8px; overflow:hidden; border-radius:10px; background:rgba(255,255,255,.12); }
+        .capacity-fill { height:100%; width:0%; background:#48df79; transition:width .2s; }
+        #inventoryItems { margin-top:16px; display:grid; gap:9px; }
+        .inventory-item { display:flex; align-items:center; gap:12px; padding:12px; border-radius:12px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.10); }
+        .inventory-icon { font-size:28px; }
+        .inventory-item-name { font-weight:800; font-size:14px; }
+        .inventory-item-stats { margin-top:3px; color:#b9c6d3; font-size:12px; }
+        #closeInventory { margin-top:18px; width:100%; padding:12px; border:0; border-radius:11px; font-weight:800; cursor:pointer; }
+
         .hidden {
             display: none !important;
         }
@@ -624,6 +653,14 @@
                 🔦 Увімкнути
             </button>
 
+            <div id="inventoryStatus" class="hud-chip">
+                Рюкзак: 2.0 / 35.0 кг (0 / 80 л)
+            </div>
+
+            <button id="inventoryButton" class="hud-button">
+                🎒 Рюкзак
+            </button>
+
         </div>
 
     </div>
@@ -650,6 +687,22 @@
         Пошук GPS...
     </div>
 
+
+    <!-- INVENTORY MODAL -->
+    <div id="inventoryModal" class="hidden">
+        <div class="inventory-card">
+            <div class="inventory-header">
+                <h2>🎒 Рюкзак</h2>
+            </div>
+            <div id="inventorySummary" class="inventory-summary"></div>
+            <div class="capacity-label"><span>Вага</span><span id="weightText"></span></div>
+            <div class="capacity-bar"><div id="weightFill" class="capacity-fill"></div></div>
+            <div class="capacity-label"><span>Об'єм</span><span id="volumeText"></span></div>
+            <div class="capacity-bar"><div id="volumeFill" class="capacity-fill"></div></div>
+            <div id="inventoryItems"></div>
+            <button id="closeInventory">Закрити</button>
+        </div>
+    </div>
 
     <!-- LOGIN -->
 
@@ -693,6 +746,100 @@
 
 
 <script>
+
+/* =========================================================
+   INVENTORY
+========================================================= */
+const MAX_INVENTORY_WEIGHT = 35.0;
+const MAX_INVENTORY_VOLUME = 80.0;
+const INVENTORY_STORAGE_KEY = "geoGameInventory";
+
+const STARTER_AXE = {
+    id: "scout_axe", name: "Сокира розвідника", icon: "🪓",
+    weight: 2.0, volume: 0, external: true
+};
+
+let inventory = [];
+
+function loadInventory() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
+        inventory = Array.isArray(saved) ? saved : [];
+    } catch (_) { inventory = []; }
+    if (!inventory.some(item => item.id === STARTER_AXE.id)) {
+        inventory.unshift({...STARTER_AXE});
+        saveInventory();
+    }
+}
+
+function saveInventory() {
+    localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(inventory));
+}
+
+function getInventoryWeight() {
+    return inventory.reduce((sum, item) => sum + Number(item.weight || 0), 0);
+}
+
+function getInventoryVolume() {
+    return inventory.reduce((sum, item) => sum + (item.external ? 0 : Number(item.volume || 0)), 0);
+}
+
+function canAddItem(weight, volume) {
+    const w = Number(weight), v = Number(volume);
+    if (!Number.isFinite(w) || !Number.isFinite(v) || w < 0 || v < 0) return false;
+    return getInventoryWeight() + w <= MAX_INVENTORY_WEIGHT &&
+           getInventoryVolume() + v <= MAX_INVENTORY_VOLUME;
+}
+
+function addItem(item) {
+    const volume = item.external ? 0 : Number(item.volume || 0);
+    if (!canAddItem(item.weight, volume)) return false;
+    inventory.push(item);
+    saveInventory();
+    updateInventoryUI();
+    return true;
+}
+
+function formatLiters(value) {
+    return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function updateInventoryUI() {
+    const weight = getInventoryWeight();
+    const volume = getInventoryVolume();
+    const status = `Рюкзак: ${weight.toFixed(1)} / ${MAX_INVENTORY_WEIGHT.toFixed(1)} кг (${formatLiters(volume)} / ${formatLiters(MAX_INVENTORY_VOLUME)} л)`;
+    document.getElementById("inventoryStatus").textContent = status;
+    document.getElementById("inventorySummary").textContent = status;
+    document.getElementById("weightText").textContent = `${weight.toFixed(1)} / ${MAX_INVENTORY_WEIGHT.toFixed(1)} кг`;
+    document.getElementById("volumeText").textContent = `${formatLiters(volume)} / ${formatLiters(MAX_INVENTORY_VOLUME)} л`;
+    document.getElementById("weightFill").style.width = `${Math.min(100, weight / MAX_INVENTORY_WEIGHT * 100)}%`;
+    document.getElementById("volumeFill").style.width = `${Math.min(100, volume / MAX_INVENTORY_VOLUME * 100)}%`;
+    const list = document.getElementById("inventoryItems");
+    list.innerHTML = "";
+    inventory.forEach(item => {
+        const row = document.createElement("div"); row.className = "inventory-item";
+        const icon = document.createElement("div"); icon.className = "inventory-icon"; icon.textContent = item.icon || "📦";
+        const info = document.createElement("div");
+        const name = document.createElement("div"); name.className = "inventory-item-name"; name.textContent = item.name;
+        const stats = document.createElement("div"); stats.className = "inventory-item-stats";
+        stats.textContent = `${Number(item.weight).toFixed(1)} кг / ${formatLiters(item.external ? 0 : Number(item.volume || 0))} л${item.external ? " · зовнішнє кріплення" : ""}`;
+        info.append(name, stats); row.append(icon, info); list.appendChild(row);
+    });
+}
+
+document.getElementById("inventoryButton").addEventListener("click", () => {
+    updateInventoryUI();
+    document.getElementById("inventoryModal").classList.remove("hidden");
+});
+document.getElementById("closeInventory").addEventListener("click", () => {
+    document.getElementById("inventoryModal").classList.add("hidden");
+});
+document.getElementById("inventoryModal").addEventListener("click", e => {
+    if (e.target.id === "inventoryModal") e.currentTarget.classList.add("hidden");
+});
+
+loadInventory();
+updateInventoryUI();
 
 /* =========================================================
    STORAGE
