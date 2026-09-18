@@ -1,0 +1,2586 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="
+            width=device-width,
+            initial-scale=1.0,
+            maximum-scale=1.0,
+            user-scalable=no,
+            viewport-fit=cover
+        "
+    >
+
+    <title>GeoGame — Fog of War MVP</title>
+
+    <!-- Leaflet -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+
+            background: #080d12;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+        }
+
+        /* =========================
+           MAP
+        ========================== */
+
+        #map {
+            position: fixed;
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+
+            z-index: 1;
+        }
+
+        /* =========================
+           FOG CANVAS
+        ========================== */
+
+        #fogCanvas {
+            position: fixed;
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+
+            z-index: 500;
+
+            pointer-events: none;
+        }
+
+        /* =========================
+           GAME HUD
+        ========================== */
+
+        #gameUI {
+            position: fixed;
+
+            top: 0;
+            left: 0;
+            right: 0;
+
+            z-index: 1200;
+
+            padding:
+                calc(10px + env(safe-area-inset-top))
+                12px
+                10px;
+
+            color: white;
+
+            background:
+                linear-gradient(
+                    to bottom,
+                    rgba(7, 12, 18, 0.96),
+                    rgba(7, 12, 18, 0.76)
+                );
+
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+
+            border-bottom:
+                1px solid rgba(255,255,255,0.12);
+
+            box-shadow:
+                0 5px 20px rgba(0,0,0,0.35);
+        }
+
+        .hud-main {
+            display: flex;
+
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 10px;
+        }
+
+        .player-info {
+            min-width: 0;
+        }
+
+        .player-name {
+            font-size: 15px;
+            font-weight: 800;
+
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .hp-row {
+            margin-top: 4px;
+
+            font-size: 12px;
+
+            color: #cbd6df;
+        }
+
+        .hp-bar {
+            width: 100px;
+            height: 5px;
+
+            margin-top: 4px;
+
+            overflow: hidden;
+
+            border-radius: 20px;
+
+            background:
+                rgba(255,255,255,0.16);
+        }
+
+        .hp-fill {
+            width: 100%;
+            height: 100%;
+
+            background: #48df79;
+        }
+
+        .speed-box {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        #speed {
+            font-size: 23px;
+            font-weight: 900;
+        }
+
+        .speed-unit {
+            font-size: 10px;
+
+            color: #aab7c3;
+        }
+
+        /* =========================
+           SECOND HUD ROW
+        ========================== */
+
+        .hud-controls {
+            display: flex;
+
+            align-items: center;
+
+            gap: 7px;
+
+            margin-top: 9px;
+
+            overflow-x: auto;
+
+            scrollbar-width: none;
+        }
+
+        .hud-controls::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hud-chip,
+        .hud-button {
+            flex: 0 0 auto;
+
+            border:
+                1px solid rgba(255,255,255,0.15);
+
+            border-radius: 10px;
+
+            padding: 7px 10px;
+
+            color: white;
+
+            background:
+                rgba(255,255,255,0.09);
+
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .hud-button {
+            cursor: pointer;
+        }
+
+        .hud-button:active {
+            transform: scale(0.96);
+        }
+
+        #flashlightButton.active {
+            background:
+                rgba(255, 211, 77, 0.22);
+
+            border-color:
+                rgba(255, 211, 77, 0.55);
+
+            color: #ffe58b;
+        }
+
+        #biomeButton.field {
+            background:
+                rgba(77, 199, 110, 0.20);
+
+            border-color:
+                rgba(77, 199, 110, 0.45);
+        }
+
+        /* =========================
+           PLAYER MARKER
+        ========================== */
+
+        .player-marker-wrapper {
+            position: relative;
+
+            width: 24px;
+            height: 24px;
+        }
+
+        .player-marker {
+            position: absolute;
+
+            left: 0;
+            top: 0;
+
+            width: 24px;
+            height: 24px;
+
+            border-radius: 50%;
+
+            background: #168cff;
+
+            border: 4px solid white;
+
+            box-shadow:
+                0 0 0 6px rgba(22,140,255,0.22),
+                0 3px 10px rgba(0,0,0,0.55);
+
+            z-index: 2;
+        }
+
+        .player-pulse {
+            position: absolute;
+
+            left: -10px;
+            top: -10px;
+
+            width: 44px;
+            height: 44px;
+
+            border-radius: 50%;
+
+            background:
+                rgba(22,140,255,0.27);
+
+            animation:
+                playerPulse 2s infinite;
+        }
+
+        @keyframes playerPulse {
+
+            0% {
+                transform: scale(0.5);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1.7);
+                opacity: 0;
+            }
+
+        }
+
+        /* =========================
+           GPS STATUS
+        ========================== */
+
+        #gpsStatus {
+            position: fixed;
+
+            left: 50%;
+
+            bottom:
+                calc(
+                    20px +
+                    env(safe-area-inset-bottom)
+                );
+
+            transform:
+                translateX(-50%);
+
+            z-index: 1300;
+
+            padding: 9px 14px;
+
+            border-radius: 20px;
+
+            color: white;
+
+            background:
+                rgba(8,13,19,0.88);
+
+            backdrop-filter: blur(8px);
+
+            font-size: 12px;
+
+            white-space: nowrap;
+
+            box-shadow:
+                0 4px 15px rgba(0,0,0,0.35);
+        }
+
+        /* =========================
+           LOGIN
+        ========================== */
+
+        #loginScreen {
+            position: fixed;
+            inset: 0;
+
+            z-index: 5000;
+
+            display: flex;
+
+            justify-content: center;
+            align-items: center;
+
+            padding: 24px;
+
+            background:
+
+                radial-gradient(
+                    circle at 30% 20%,
+                    #23466b 0%,
+                    transparent 40%
+                ),
+
+                radial-gradient(
+                    circle at 80% 80%,
+                    #102d48 0%,
+                    transparent 40%
+                ),
+
+                linear-gradient(
+                    145deg,
+                    #07111d,
+                    #101b28
+                );
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 390px;
+
+            padding: 38px 26px 30px;
+
+            text-align: center;
+
+            color: white;
+
+            border-radius: 26px;
+
+            background:
+                rgba(255,255,255,0.08);
+
+            border:
+                1px solid rgba(255,255,255,0.14);
+
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+
+            box-shadow:
+                0 25px 60px rgba(0,0,0,0.45);
+        }
+
+        .game-logo {
+            width: 78px;
+            height: 78px;
+
+            margin:
+                0 auto 20px;
+
+            display: flex;
+
+            justify-content: center;
+            align-items: center;
+
+            border-radius: 24px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #168cff,
+                    #00d0ff
+                );
+
+            font-size: 38px;
+
+            box-shadow:
+                0 12px 30px
+                rgba(0,140,255,0.35);
+        }
+
+        .login-card h1 {
+            font-size: 30px;
+
+            margin-bottom: 10px;
+        }
+
+        .login-card p {
+            margin-bottom: 30px;
+
+            color: #b9c6d3;
+
+            font-size: 14px;
+
+            line-height: 1.5;
+        }
+
+        #googleLogin {
+            width: 100%;
+
+            border: none;
+
+            border-radius: 14px;
+
+            padding: 16px;
+
+            background: white;
+
+            color: #222;
+
+            font-size: 15px;
+            font-weight: 800;
+
+            cursor: pointer;
+        }
+
+        .prototype-note {
+            margin-top: 18px !important;
+            margin-bottom: 0 !important;
+
+            font-size: 11px !important;
+
+            color: #718091 !important;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /*
+            Leaflet controls lower
+            because HUD occupies top.
+        */
+
+        .leaflet-top {
+            top: 125px;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <!-- MAP -->
+
+    <div id="map"></div>
+
+
+    <!--
+        Canvas is ABOVE map but BELOW HUD.
+
+        All fog rendering happens here.
+    -->
+
+    <canvas id="fogCanvas"></canvas>
+
+
+    <!-- GAME HUD -->
+
+    <div
+        id="gameUI"
+        class="hidden"
+    >
+
+        <div class="hud-main">
+
+            <div class="player-info">
+
+                <div class="player-name">
+                    Gamer_Gmail
+                </div>
+
+                <div class="hp-row">
+                    HP:
+                    <span id="hp">
+                        100
+                    </span>
+                </div>
+
+                <div class="hp-bar">
+                    <div class="hp-fill"></div>
+                </div>
+
+            </div>
+
+
+            <div class="speed-box">
+
+                <div id="speed">
+                    0.0
+                </div>
+
+                <div class="speed-unit">
+                    км/год
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="hud-controls">
+
+            <div
+                id="timeMode"
+                class="hud-chip"
+            >
+                ☀️ День
+            </div>
+
+
+            <button
+                id="biomeButton"
+                class="hud-button"
+            >
+                🏙 Місто
+            </button>
+
+
+            <div
+                id="visionInfo"
+                class="hud-chip"
+            >
+                👁 50 м
+            </div>
+
+
+            <button
+                id="flashlightButton"
+                class="hud-button"
+            >
+                🔦 Увімкнути
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- GPS STATUS -->
+
+    <div
+        id="gpsStatus"
+        class="hidden"
+    >
+        Пошук GPS...
+    </div>
+
+
+    <!-- LOGIN -->
+
+    <div id="loginScreen">
+
+        <div class="login-card">
+
+            <div class="game-logo">
+                🌍
+            </div>
+
+            <h1>
+                GEO WORLD
+            </h1>
+
+            <p>
+                Досліджуй реальний світ.<br>
+                Відкривай території та
+                розсіюй туман війни.
+            </p>
+
+            <button id="googleLogin">
+                Увійти через Google (Gmail)
+            </button>
+
+            <p class="prototype-note">
+                MVP — тестова авторизація
+                без сервера
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- Leaflet JS -->
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+    </script>
+
+
+<script>
+
+/* =========================================================
+   STORAGE
+========================================================= */
+
+const LOGIN_STORAGE_KEY =
+    "geoGameLoggedIn";
+
+const EXPLORED_STORAGE_KEY =
+    "geoGameExploredZones";
+
+const FLASHLIGHT_STORAGE_KEY =
+    "geoGameFlashlight";
+
+const BIOME_STORAGE_KEY =
+    "geoGameBiome";
+
+
+/* =========================================================
+   GAME STATE
+========================================================= */
+
+let map = null;
+
+let playerMarker = null;
+
+let accuracyCircle = null;
+
+let firstGPSPosition = true;
+
+let previousPosition = null;
+
+let currentPosition = null;
+
+let watchId = null;
+
+
+/*
+    Previously explored areas.
+
+    Each object:
+
+    {
+        lat: number,
+        lng: number,
+        radius: number
+    }
+*/
+
+let exploredZones = [];
+
+
+/*
+    Biome MVP.
+
+    "city"
+    "field"
+*/
+
+let currentBiome =
+    localStorage.getItem(
+        BIOME_STORAGE_KEY
+    ) || "city";
+
+
+let flashlightEnabled =
+    localStorage.getItem(
+        FLASHLIGHT_STORAGE_KEY
+    ) === "true";
+
+
+/*
+    Prevent saving GPS zones
+    every few milliseconds.
+*/
+
+let lastSavedZone = null;
+
+
+/* =========================================================
+   DOM
+========================================================= */
+
+const loginScreen =
+    document.getElementById(
+        "loginScreen"
+    );
+
+const loginButton =
+    document.getElementById(
+        "googleLogin"
+    );
+
+const gameUI =
+    document.getElementById(
+        "gameUI"
+    );
+
+const speedElement =
+    document.getElementById(
+        "speed"
+    );
+
+const gpsStatus =
+    document.getElementById(
+        "gpsStatus"
+    );
+
+const flashlightButton =
+    document.getElementById(
+        "flashlightButton"
+    );
+
+const biomeButton =
+    document.getElementById(
+        "biomeButton"
+    );
+
+const timeMode =
+    document.getElementById(
+        "timeMode"
+    );
+
+const visionInfo =
+    document.getElementById(
+        "visionInfo"
+    );
+
+
+/* =========================================================
+   FOG CANVAS
+========================================================= */
+
+const fogCanvas =
+    document.getElementById(
+        "fogCanvas"
+    );
+
+const fogContext =
+    fogCanvas.getContext(
+        "2d"
+    );
+
+
+/* =========================================================
+   LOGIN
+========================================================= */
+
+function checkLogin() {
+
+    const loggedIn =
+        localStorage.getItem(
+            LOGIN_STORAGE_KEY
+        );
+
+    if (loggedIn === "true") {
+
+        loginScreen.classList.add(
+            "hidden"
+        );
+
+        startGame();
+
+    }
+
+}
+
+
+loginButton.addEventListener(
+    "click",
+    function () {
+
+        localStorage.setItem(
+            LOGIN_STORAGE_KEY,
+            "true"
+        );
+
+        loginScreen.classList.add(
+            "hidden"
+        );
+
+        startGame();
+
+    }
+);
+
+
+/* =========================================================
+   START GAME
+========================================================= */
+
+function startGame() {
+
+    gameUI.classList.remove(
+        "hidden"
+    );
+
+    gpsStatus.classList.remove(
+        "hidden"
+    );
+
+    loadExploredZones();
+
+    updateHUD();
+
+    initMap();
+
+    resizeFogCanvas();
+
+    drawFog();
+
+    startGPS();
+
+}
+
+
+/* =========================================================
+   MAP
+========================================================= */
+
+function initMap() {
+
+    if (map) {
+        return;
+    }
+
+
+    map = L.map(
+        "map",
+        {
+            zoomControl: true
+        }
+    ).setView(
+        [50.4501, 30.5234],
+        16
+    );
+
+
+    L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+
+            maxZoom: 19,
+
+            attribution:
+                "&copy; OpenStreetMap contributors"
+
+        }
+    ).addTo(map);
+
+
+    /*
+        Fog must redraw whenever
+        map position or zoom changes.
+    */
+
+    map.on(
+        "move zoom resize",
+        drawFog
+    );
+
+
+    map.on(
+        "moveend zoomend",
+        drawFog
+    );
+
+}
+
+
+/* =========================================================
+   PLAYER ICON
+========================================================= */
+
+const playerIcon =
+    L.divIcon({
+
+        className: "",
+
+        html: `
+            <div class="player-marker-wrapper">
+
+                <div class="player-pulse">
+                </div>
+
+                <div class="player-marker">
+                </div>
+
+            </div>
+        `,
+
+        iconSize:
+            [24, 24],
+
+        iconAnchor:
+            [12, 12]
+
+    });
+
+
+/* =========================================================
+   GPS
+========================================================= */
+
+function startGPS() {
+
+    if (!navigator.geolocation) {
+
+        gpsStatus.textContent =
+            "GPS не підтримується";
+
+        return;
+
+    }
+
+
+    gpsStatus.textContent =
+        "Пошук GPS...";
+
+
+    watchId =
+        navigator.geolocation
+        .watchPosition(
+
+            handlePosition,
+
+            handleGPSError,
+
+            {
+
+                enableHighAccuracy:
+                    true,
+
+                maximumAge:
+                    1000,
+
+                timeout:
+                    15000
+
+            }
+
+        );
+
+}
+
+
+/* =========================================================
+   GPS POSITION
+========================================================= */
+
+function handlePosition(
+    position
+) {
+
+    const latitude =
+        position.coords.latitude;
+
+    const longitude =
+        position.coords.longitude;
+
+    const accuracy =
+        position.coords.accuracy;
+
+
+    currentPosition = {
+
+        lat: latitude,
+
+        lng: longitude,
+
+        accuracy: accuracy
+
+    };
+
+
+    const latLng =
+        [
+            latitude,
+            longitude
+        ];
+
+
+    /*
+        PLAYER
+    */
+
+    if (!playerMarker) {
+
+        playerMarker =
+            L.marker(
+                latLng,
+                {
+                    icon:
+                        playerIcon
+                }
+            )
+            .addTo(map);
+
+    }
+    else {
+
+        playerMarker
+            .setLatLng(
+                latLng
+            );
+
+    }
+
+
+    /*
+        GPS ACCURACY
+    */
+
+    if (!accuracyCircle) {
+
+        accuracyCircle =
+            L.circle(
+                latLng,
+                {
+
+                    radius:
+                        accuracy,
+
+                    weight:
+                        1,
+
+                    color:
+                        "#168cff",
+
+                    fillColor:
+                        "#168cff",
+
+                    opacity:
+                        0.35,
+
+                    fillOpacity:
+                        0.05
+
+                }
+            )
+            .addTo(map);
+
+    }
+    else {
+
+        accuracyCircle
+            .setLatLng(
+                latLng
+            );
+
+        accuracyCircle
+            .setRadius(
+                accuracy
+            );
+
+    }
+
+
+    /*
+        MAP FOLLOW
+    */
+
+    if (firstGPSPosition) {
+
+        map.setView(
+            latLng,
+            18
+        );
+
+        firstGPSPosition =
+            false;
+
+    }
+    else {
+
+        map.panTo(
+            latLng,
+            {
+
+                animate: true,
+
+                duration: 0.5
+
+            }
+        );
+
+    }
+
+
+    /*
+        SPEED
+    */
+
+    const speed =
+        calculateSpeed(
+            position
+        );
+
+    speedElement.textContent =
+        speed.toFixed(1);
+
+
+    /*
+        VISION
+    */
+
+    const radius =
+        getCurrentVisionRadius();
+
+
+    /*
+        Save explored area.
+    */
+
+    saveExploredPointIfNeeded(
+        latitude,
+        longitude,
+        radius
+    );
+
+
+    /*
+        Redraw fog immediately.
+    */
+
+    drawFog();
+
+    updateHUD();
+
+
+    gpsStatus.textContent =
+        "GPS ±" +
+        Math.round(
+            accuracy
+        ) +
+        " м";
+
+}
+
+
+/* =========================================================
+   DAY / NIGHT
+========================================================= */
+
+/*
+    Summer rule requested:
+
+    DAY:
+        06:00 -> 21:59
+
+    NIGHT:
+        22:00 -> 05:59
+*/
+
+function isNight() {
+
+    const hour =
+        new Date().getHours();
+
+    return (
+        hour >= 22 ||
+        hour < 6
+    );
+
+}
+
+
+/* =========================================================
+   VISION RADIUS
+========================================================= */
+
+function getCurrentVisionRadius() {
+
+    const night =
+        isNight();
+
+
+    /*
+        DAY
+    */
+
+    if (!night) {
+
+        if (
+            currentBiome ===
+            "city"
+        ) {
+
+            return 50;
+
+        }
+
+        return 200;
+
+    }
+
+
+    /*
+        NIGHT + FLASHLIGHT
+
+        Flashlight cancels
+        night penalty.
+    */
+
+    if (flashlightEnabled) {
+
+        if (
+            currentBiome ===
+            "city"
+        ) {
+
+            return 50;
+
+        }
+
+        return 200;
+
+    }
+
+
+    /*
+        NIGHT WITHOUT FLASHLIGHT
+    */
+
+    if (
+        currentBiome ===
+        "city"
+    ) {
+
+        return 0;
+
+    }
+
+
+    return 50;
+
+}
+
+
+/* =========================================================
+   FLASHLIGHT
+========================================================= */
+
+flashlightButton
+.addEventListener(
+    "click",
+    function () {
+
+        flashlightEnabled =
+            !flashlightEnabled;
+
+
+        localStorage.setItem(
+            FLASHLIGHT_STORAGE_KEY,
+            flashlightEnabled
+                ? "true"
+                : "false"
+        );
+
+
+        /*
+            If player is standing
+            somewhere and turns
+            flashlight on, this new
+            radius becomes explored.
+        */
+
+        if (currentPosition) {
+
+            const radius =
+                getCurrentVisionRadius();
+
+            saveExploredPointIfNeeded(
+
+                currentPosition.lat,
+
+                currentPosition.lng,
+
+                radius,
+
+                true
+
+            );
+
+        }
+
+
+        updateHUD();
+
+        drawFog();
+
+    }
+);
+
+
+/* =========================================================
+   BIOME MVP SWITCH
+========================================================= */
+
+/*
+    OSM tile images do NOT expose
+    underlying OSM tags.
+
+    For MVP this button simulates
+    city / open terrain.
+
+    Later this function can be
+    replaced by Overpass API data.
+*/
+
+biomeButton
+.addEventListener(
+    "click",
+    function () {
+
+        if (
+            currentBiome ===
+            "city"
+        ) {
+
+            currentBiome =
+                "field";
+
+        }
+        else {
+
+            currentBiome =
+                "city";
+
+        }
+
+
+        localStorage.setItem(
+            BIOME_STORAGE_KEY,
+            currentBiome
+        );
+
+
+        /*
+            Biome changed,
+            so current exploration
+            radius can change.
+        */
+
+        if (currentPosition) {
+
+            saveExploredPointIfNeeded(
+
+                currentPosition.lat,
+
+                currentPosition.lng,
+
+                getCurrentVisionRadius(),
+
+                true
+
+            );
+
+        }
+
+
+        updateHUD();
+
+        drawFog();
+
+    }
+);
+
+
+/* =========================================================
+   HUD
+========================================================= */
+
+function updateHUD() {
+
+    const night =
+        isNight();
+
+    const radius =
+        getCurrentVisionRadius();
+
+
+    /*
+        DAY/NIGHT
+    */
+
+    if (night) {
+
+        timeMode.textContent =
+            "🌙 Ніч";
+
+    }
+    else {
+
+        timeMode.textContent =
+            "☀️ День";
+
+    }
+
+
+    /*
+        BIOME
+    */
+
+    if (
+        currentBiome ===
+        "city"
+    ) {
+
+        biomeButton.textContent =
+            "🏙 Місто";
+
+        biomeButton
+            .classList
+            .remove(
+                "field"
+            );
+
+    }
+    else {
+
+        biomeButton.textContent =
+            "🌾 Поле";
+
+        biomeButton
+            .classList
+            .add(
+                "field"
+            );
+
+    }
+
+
+    /*
+        VISION
+    */
+
+    visionInfo.textContent =
+        "👁 " +
+        radius +
+        " м";
+
+
+    /*
+        FLASHLIGHT
+    */
+
+    if (flashlightEnabled) {
+
+        flashlightButton
+            .classList
+            .add(
+                "active"
+            );
+
+        flashlightButton
+            .textContent =
+                "🔦 Вимкнути";
+
+    }
+    else {
+
+        flashlightButton
+            .classList
+            .remove(
+                "active"
+            );
+
+        flashlightButton
+            .textContent =
+                "🔦 Увімкнути";
+
+    }
+
+}
+
+
+/* =========================================================
+   EXPLORED ZONES
+========================================================= */
+
+function loadExploredZones() {
+
+    try {
+
+        const saved =
+            localStorage.getItem(
+                EXPLORED_STORAGE_KEY
+            );
+
+        if (!saved) {
+
+            exploredZones = [];
+
+            return;
+
+        }
+
+
+        const parsed =
+            JSON.parse(
+                saved
+            );
+
+
+        if (
+            Array.isArray(
+                parsed
+            )
+        ) {
+
+            exploredZones =
+                parsed;
+
+        }
+
+    }
+    catch (error) {
+
+        console.error(
+            "Помилка завантаження Fog of War:",
+            error
+        );
+
+        exploredZones = [];
+
+    }
+
+}
+
+
+/* =========================================================
+   SAVE EXPLORED POINT
+========================================================= */
+
+function saveExploredPointIfNeeded(
+    lat,
+    lng,
+    radius,
+    force = false
+) {
+
+    /*
+        Radius 0 means:
+        player can see only
+        their exact position.
+
+        No meaningful area
+        is permanently revealed.
+    */
+
+    if (radius <= 0) {
+
+        return;
+
+    }
+
+
+    /*
+        First point.
+    */
+
+    if (!lastSavedZone) {
+
+        addExploredZone(
+            lat,
+            lng,
+            radius
+        );
+
+        return;
+
+    }
+
+
+    /*
+        Distance from previous
+        stored exploration point.
+    */
+
+    const distance =
+        getDistance(
+
+            lastSavedZone.lat,
+
+            lastSavedZone.lng,
+
+            lat,
+
+            lng
+
+        );
+
+
+    /*
+        We don't need thousands
+        of overlapping circles.
+
+        Save another point after
+        moving roughly 25% of
+        current visibility radius.
+
+        Minimum = 5 m.
+    */
+
+    const saveDistance =
+        Math.max(
+            5,
+            radius * 0.25
+        );
+
+
+    /*
+        Also save if radius increased.
+
+        Example:
+        night -> flashlight ON
+    */
+
+    const radiusIncreased =
+        radius >
+        lastSavedZone.radius;
+
+
+    if (
+        force ||
+        distance >= saveDistance ||
+        radiusIncreased
+    ) {
+
+        addExploredZone(
+            lat,
+            lng,
+            radius
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   ADD EXPLORED ZONE
+========================================================= */
+
+function addExploredZone(
+    lat,
+    lng,
+    radius
+) {
+
+    const zone = {
+
+        lat:
+            Number(
+                lat.toFixed(6)
+            ),
+
+        lng:
+            Number(
+                lng.toFixed(6)
+            ),
+
+        radius:
+            Math.round(
+                radius
+            )
+
+    };
+
+
+    exploredZones.push(
+        zone
+    );
+
+
+    lastSavedZone =
+        zone;
+
+
+    /*
+        MVP protection against
+        endlessly growing LocalStorage.
+
+        Keep latest 5000 circles.
+
+        Later this should be replaced
+        by merged polygons / server DB.
+    */
+
+    const MAX_ZONES =
+        5000;
+
+
+    if (
+        exploredZones.length >
+        MAX_ZONES
+    ) {
+
+        exploredZones =
+            exploredZones.slice(
+                -MAX_ZONES
+            );
+
+    }
+
+
+    try {
+
+        localStorage.setItem(
+
+            EXPLORED_STORAGE_KEY,
+
+            JSON.stringify(
+                exploredZones
+            )
+
+        );
+
+    }
+    catch (error) {
+
+        console.error(
+            "LocalStorage full:",
+            error
+        );
+
+    }
+
+
+    drawFog();
+
+}
+
+
+/* =========================================================
+   FOG CANVAS SIZE
+========================================================= */
+
+function resizeFogCanvas() {
+
+    /*
+        DevicePixelRatio makes
+        circle edges sharper
+        on phone screens.
+    */
+
+    const ratio =
+        window.devicePixelRatio ||
+        1;
+
+
+    fogCanvas.width =
+        Math.floor(
+            window.innerWidth *
+            ratio
+        );
+
+
+    fogCanvas.height =
+        Math.floor(
+            window.innerHeight *
+            ratio
+        );
+
+
+    fogCanvas.style.width =
+        window.innerWidth +
+        "px";
+
+
+    fogCanvas.style.height =
+        window.innerHeight +
+        "px";
+
+
+    fogContext.setTransform(
+        ratio,
+        0,
+        0,
+        ratio,
+        0,
+        0
+    );
+
+
+    drawFog();
+
+}
+
+
+/* =========================================================
+   METERS -> SCREEN PIXELS
+========================================================= */
+
+/*
+    Leaflet knows geographic
+    projection.
+
+    We take a geographic point,
+    calculate another point
+    X meters east,
+    then measure pixel distance.
+
+    This gives accurate screen
+    radius for current zoom.
+*/
+
+function metersToPixels(
+    lat,
+    lng,
+    meters
+) {
+
+    if (
+        !map ||
+        meters <= 0
+    ) {
+
+        return 0;
+
+    }
+
+
+    /*
+        Approximate longitude
+        degrees per meter.
+    */
+
+    const latitudeRadians =
+        lat *
+        Math.PI /
+        180;
+
+
+    const metersPerDegreeLongitude =
+        111320 *
+        Math.cos(
+            latitudeRadians
+        );
+
+
+    if (
+        Math.abs(
+            metersPerDegreeLongitude
+        ) < 0.0001
+    ) {
+
+        return 0;
+
+    }
+
+
+    const longitudeOffset =
+        meters /
+        metersPerDegreeLongitude;
+
+
+    const centerPoint =
+        map.latLngToContainerPoint(
+            [lat, lng]
+        );
+
+
+    const edgePoint =
+        map.latLngToContainerPoint(
+            [
+                lat,
+                lng +
+                longitudeOffset
+            ]
+        );
+
+
+    return Math.abs(
+        edgePoint.x -
+        centerPoint.x
+    );
+
+}
+
+
+/* =========================================================
+   DRAW FOG
+========================================================= */
+
+function drawFog() {
+
+    if (!map) {
+        return;
+    }
+
+
+    const width =
+        window.innerWidth;
+
+    const height =
+        window.innerHeight;
+
+
+    /*
+        Reset composition.
+    */
+
+    fogContext
+        .globalCompositeOperation =
+            "source-over";
+
+
+    fogContext.clearRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+
+    /*
+        Black translucent fog.
+    */
+
+    fogContext.fillStyle =
+        "rgba(0, 0, 0, 0.78)";
+
+
+    fogContext.fillRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+
+    /*
+        Everything drawn now
+        CUTS holes from the fog.
+    */
+
+    fogContext
+        .globalCompositeOperation =
+            "destination-out";
+
+
+    /*
+        =================================
+        PERMANENTLY EXPLORED AREAS
+        =================================
+    */
+
+    for (
+        let i = 0;
+        i < exploredZones.length;
+        i++
+    ) {
+
+        const zone =
+            exploredZones[i];
+
+
+        drawVisibilityHole(
+
+            zone.lat,
+
+            zone.lng,
+
+            zone.radius,
+
+            false
+
+        );
+
+    }
+
+
+    /*
+        =================================
+        CURRENT PLAYER VISION
+        =================================
+    */
+
+    if (currentPosition) {
+
+        const radius =
+            getCurrentVisionRadius();
+
+
+        /*
+            Radius 0:
+
+            create only tiny
+            visual hole under player.
+        */
+
+        if (radius <= 0) {
+
+            drawTinyPlayerHole(
+
+                currentPosition.lat,
+
+                currentPosition.lng
+
+            );
+
+        }
+        else {
+
+            drawVisibilityHole(
+
+                currentPosition.lat,
+
+                currentPosition.lng,
+
+                radius,
+
+                true
+
+            );
+
+        }
+
+    }
+
+
+    /*
+        Restore normal drawing.
+    */
+
+    fogContext
+        .globalCompositeOperation =
+            "source-over";
+
+}
+
+
+/* =========================================================
+   DRAW VISIBILITY CIRCLE
+========================================================= */
+
+function drawVisibilityHole(
+    lat,
+    lng,
+    radiusMeters,
+    current
+) {
+
+    const point =
+        map.latLngToContainerPoint(
+            [lat, lng]
+        );
+
+
+    const radiusPixels =
+        metersToPixels(
+
+            lat,
+
+            lng,
+
+            radiusMeters
+
+        );
+
+
+    /*
+        Skip circles completely
+        outside screen.
+
+        Important once player
+        has thousands of zones.
+    */
+
+    if (
+        point.x + radiusPixels < 0 ||
+        point.y + radiusPixels < 0 ||
+        point.x - radiusPixels >
+            window.innerWidth ||
+        point.y - radiusPixels >
+            window.innerHeight
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+        Permanent explored zone:
+        perfectly clear.
+
+        Current zone:
+        slight soft edge.
+    */
+
+    if (!current) {
+
+        fogContext.beginPath();
+
+        fogContext.arc(
+
+            point.x,
+
+            point.y,
+
+            radiusPixels,
+
+            0,
+
+            Math.PI * 2
+
+        );
+
+        fogContext.fill();
+
+        return;
+
+    }
+
+
+    /*
+        Current visibility gets
+        a subtle feathered edge.
+    */
+
+    const gradient =
+        fogContext
+        .createRadialGradient(
+
+            point.x,
+            point.y,
+            radiusPixels * 0.85,
+
+            point.x,
+            point.y,
+            radiusPixels
+
+        );
+
+
+    gradient.addColorStop(
+        0,
+        "rgba(0,0,0,1)"
+    );
+
+    gradient.addColorStop(
+        0.82,
+        "rgba(0,0,0,1)"
+    );
+
+    gradient.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+
+    fogContext.fillStyle =
+        gradient;
+
+
+    fogContext.beginPath();
+
+    fogContext.arc(
+
+        point.x,
+
+        point.y,
+
+        radiusPixels,
+
+        0,
+
+        Math.PI * 2
+
+    );
+
+    fogContext.fill();
+
+
+    /*
+        Restore opaque cutter
+        for next permanent zone.
+    */
+
+    fogContext.fillStyle =
+        "rgba(0,0,0,1)";
+
+}
+
+
+/* =========================================================
+   NIGHT CITY — RADIUS 0
+========================================================= */
+
+function drawTinyPlayerHole(
+    lat,
+    lng
+) {
+
+    const point =
+        map.latLngToContainerPoint(
+            [lat, lng]
+        );
+
+
+    /*
+        Tiny opening around
+        player's marker.
+
+        Game logic radius remains 0 m.
+    */
+
+    const radius =
+        8;
+
+
+    fogContext.beginPath();
+
+    fogContext.arc(
+
+        point.x,
+
+        point.y,
+
+        radius,
+
+        0,
+
+        Math.PI * 2
+
+    );
+
+    fogContext.fill();
+
+}
+
+
+/* =========================================================
+   SPEED
+========================================================= */
+
+function calculateSpeed(
+    position
+) {
+
+    /*
+        Native GPS speed,
+        if provided.
+    */
+
+    if (
+        position.coords.speed !== null &&
+        position.coords.speed >= 0
+    ) {
+
+        previousPosition =
+            position;
+
+        return (
+            position.coords.speed *
+            3.6
+        );
+
+    }
+
+
+    /*
+        Calculate manually.
+    */
+
+    if (!previousPosition) {
+
+        previousPosition =
+            position;
+
+        return 0;
+
+    }
+
+
+    const distance =
+        getDistance(
+
+            previousPosition
+                .coords
+                .latitude,
+
+            previousPosition
+                .coords
+                .longitude,
+
+            position
+                .coords
+                .latitude,
+
+            position
+                .coords
+                .longitude
+
+        );
+
+
+    const timeDifference =
+
+        (
+            position.timestamp -
+            previousPosition.timestamp
+        ) / 1000;
+
+
+    previousPosition =
+        position;
+
+
+    if (
+        timeDifference <= 0
+    ) {
+
+        return 0;
+
+    }
+
+
+    let speed =
+        (
+            distance /
+            timeDifference
+        ) * 3.6;
+
+
+    /*
+        Remove small GPS drift.
+    */
+
+    if (speed < 1) {
+
+        speed = 0;
+
+    }
+
+
+    return speed;
+
+}
+
+
+/* =========================================================
+   HAVERSINE DISTANCE
+========================================================= */
+
+/*
+    Returns distance in METERS
+    between two GPS coordinates.
+*/
+
+function getDistance(
+    lat1,
+    lon1,
+    lat2,
+    lon2
+) {
+
+    const earthRadius =
+        6371000;
+
+
+    const toRadians =
+        value =>
+            value *
+            Math.PI /
+            180;
+
+
+    const dLat =
+        toRadians(
+            lat2 - lat1
+        );
+
+
+    const dLon =
+        toRadians(
+            lon2 - lon1
+        );
+
+
+    const a =
+
+        Math.sin(
+            dLat / 2
+        ) *
+
+        Math.sin(
+            dLat / 2
+        )
+
+        +
+
+        Math.cos(
+            toRadians(lat1)
+        ) *
+
+        Math.cos(
+            toRadians(lat2)
+        ) *
+
+        Math.sin(
+            dLon / 2
+        ) *
+
+        Math.sin(
+            dLon / 2
+        );
+
+
+    const c =
+        2 *
+        Math.atan2(
+
+            Math.sqrt(a),
+
+            Math.sqrt(1 - a)
+
+        );
+
+
+    return (
+        earthRadius *
+        c
+    );
+
+}
+
+
+/* =========================================================
+   GPS ERROR
+========================================================= */
+
+function handleGPSError(
+    error
+) {
+
+    let message =
+        "Помилка GPS";
+
+
+    switch (
+        error.code
+    ) {
+
+        case error.PERMISSION_DENIED:
+
+            message =
+                "Немає дозволу на геолокацію";
+
+            break;
+
+
+        case error.POSITION_UNAVAILABLE:
+
+            message =
+                "GPS-позиція недоступна";
+
+            break;
+
+
+        case error.TIMEOUT:
+
+            message =
+                "GPS не відповідає";
+
+            break;
+
+    }
+
+
+    gpsStatus.textContent =
+        message;
+
+}
+
+
+/* =========================================================
+   WINDOW RESIZE
+========================================================= */
+
+window.addEventListener(
+    "resize",
+    function () {
+
+        resizeFogCanvas();
+
+        if (map) {
+
+            map.invalidateSize();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   TIME CHECK
+========================================================= */
+
+/*
+    Time can change while game
+    remains open.
+
+    Check once per minute.
+*/
+
+setInterval(
+    function () {
+
+        updateHUD();
+
+        drawFog();
+
+    },
+    60000
+);
+
+
+/* =========================================================
+   INIT
+========================================================= */
+
+checkLogin();
+
+</script>
+
+</body>
+</html>
