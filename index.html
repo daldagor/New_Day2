@@ -1215,6 +1215,11 @@ function initMap() {
 
 
 
+    if (!map.getPane("buildingsPane")) {
+        map.createPane("buildingsPane");
+        map.getPane("buildingsPane").style.zIndex = "460";
+        map.getPane("buildingsPane").style.pointerEvents = "auto";
+    }
     buildingLayer = L.featureGroup().addTo(map);
     renderSavedBaseBackup();
 
@@ -1574,7 +1579,8 @@ async function loadVisibleBuildings() {
     try {
         const endpoints = [
             "https://overpass-api.de/api/interpreter",
-            "https://overpass.kumi.systems/api/interpreter"
+            "https://overpass.kumi.systems/api/interpreter",
+            "https://overpass.nchc.org.tw/api/interpreter"
         ];
         let data = null;
         let lastError = null;
@@ -1626,10 +1632,16 @@ function renderOSMBuildings(elements) {
         rings.forEach((ring, index) => {
             const buildingId = `${el.type}/${el.id}${rings.length > 1 ? "/" + index : ""}`;
             const state = buildingStates[buildingId] || {};
-            const polygon = L.polygon(ring, getBuildingStyle(state));
+            const polygon = L.polygon(ring, { ...getBuildingStyle(state), pane:"buildingsPane", interactive:true, bubblingMouseEvents:false });
             const record = { id: buildingId, ring, polygon };
             polygon._buildingRecord = record;
-            polygon.bindPopup(() => buildBuildingPopup(record), { closeButton:true, autoPan:true });
+            polygon.bindPopup(() => buildBuildingPopup(record), { closeButton:true, autoPan:true, className:"game-building-popup" });
+            polygon.on("click", (e) => {
+                L.DomEvent.stopPropagation(e);
+                openBuildingRecord = record;
+                polygon.setPopupContent(buildBuildingPopup(record));
+                polygon.openPopup(e.latlng);
+            });
             polygon.on("popupopen", () => { openBuildingRecord = record; refreshOpenBuildingPopup(); });
             polygon.on("popupclose", () => { if (openBuildingRecord === record) openBuildingRecord = null; });
             polygon.addTo(buildingLayer);
@@ -1669,10 +1681,16 @@ function renderSavedBaseBackup() {
     if (alreadyRendered) return;
 
     buildingStates[backup.id] = { ...(buildingStates[backup.id] || {}), isBase:true, isDepleted:false };
-    const polygon = L.polygon(backup.ring, getBuildingStyle(buildingStates[backup.id]));
+    const polygon = L.polygon(backup.ring, { ...getBuildingStyle(buildingStates[backup.id]), pane:"buildingsPane", interactive:true, bubblingMouseEvents:false });
     const record = { id: backup.id, ring: backup.ring, polygon };
     polygon._buildingRecord = record;
-    polygon.bindPopup(() => buildBuildingPopup(record), { closeButton:true, autoPan:true });
+    polygon.bindPopup(() => buildBuildingPopup(record), { closeButton:true, autoPan:true, className:"game-building-popup" });
+    polygon.on("click", (e) => {
+        L.DomEvent.stopPropagation(e);
+        openBuildingRecord = record;
+        polygon.setPopupContent(buildBuildingPopup(record));
+        polygon.openPopup(e.latlng);
+    });
     polygon.on("popupopen", () => { openBuildingRecord = record; refreshOpenBuildingPopup(); });
     polygon.on("popupclose", () => { if (openBuildingRecord === record) openBuildingRecord = null; });
     polygon.addTo(buildingLayer);
@@ -1685,7 +1703,7 @@ function getBuildingStyle(state) {
     if (state.isDepleted) {
         return { color:"#9aa5af", weight:1, fillColor:"#6f7b86", fillOpacity:.22 };
     }
-    return { color:"#d8dee5", weight:1, fillColor:"#9aa6b2", fillOpacity:.18 };
+    return { color:"#d8dee5", weight:2, fillColor:"#9aa6b2", fillOpacity:.24 };
 }
 
 function pointInRing(lat, lng, ring) {
