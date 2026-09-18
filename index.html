@@ -1723,7 +1723,7 @@ function loadBuildingGeometryCache() {
         if (!Array.isArray(saved)) return;
         saved.forEach(item => {
             if (item && item.id && Array.isArray(item.ring) && item.ring.length >= 3) {
-                buildingMemoryCache.set(item.id, { id:item.id, ring:item.ring });
+                buildingMemoryCache.set(item.id, { id:item.id, ring:item.ring, tags:item.tags || {}, poi:item.poi || null });
             }
         });
     } catch (error) {
@@ -1735,7 +1735,7 @@ function saveBuildingGeometryCache() {
     try {
         const records = Array.from(buildingMemoryCache.values())
             .slice(-BUILDING_CACHE_MAX)
-            .map(item => ({ id:item.id, ring:item.ring }));
+            .map(item => ({ id:item.id, ring:item.ring, tags:item.tags || {}, poi:item.poi || null }));
         localStorage.setItem(BUILDING_CACHE_STORAGE_KEY, JSON.stringify(records));
     } catch (error) {
         console.warn("Не вдалося зберегти кеш будівель:", error);
@@ -2373,7 +2373,11 @@ async function loadVisibleBuildings() {
 
     const b = map.getBounds();
     const bbox = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].join(",");
-    const query = `[out:json][timeout:18];(way["building"](${bbox});relation["building"](${bbox}););out geom;`;
+    const query = `[out:json][timeout:18];(way["building"](${bbox});relation["building"](${bbox});
+  node["amenity"~"^(pharmacy|hospital|clinic|doctors|fuel|restaurant|cafe|fast_food|food_court|bar|pub|vehicle_inspection)$"](${south},${west},${north},${east});
+  node["healthcare"~"^(pharmacy|hospital|clinic|doctor|doctors)$"](${south},${west},${north},${east});
+  node["shop"~"^(supermarket|convenience|grocery|general|department_store|mall|greengrocer|bakery|butcher|deli|beverages|alcohol|car_repair|tyres|car_parts|motorcycle_repair|fuel)$"](${south},${west},${north},${east});
+);out geom;`;
 
     if (buildingRequestController) buildingRequestController.abort();
     buildingRequestController = new AbortController();
@@ -2545,78 +2549,125 @@ function getBuildingDistance(record) {
 
 
 /* ===== Automatic OSM building classification ===== */
-function classifyBuilding(tags = {}) {
-    const amenity = String(tags.amenity || "").toLowerCase();
-    const shop = String(tags.shop || "").toLowerCase();
-    const healthcare = String(tags.healthcare || "").toLowerCase();
-    const building = String(tags.building || "").toLowerCase();
-    const name = String(tags.name || "").toLowerCase();
 
-    if (
-        amenity === "pharmacy" ||
-        amenity === "hospital" ||
-        amenity === "clinic" ||
-        amenity === "doctors" ||
-        healthcare === "pharmacy" ||
-        healthcare === "hospital" ||
-        healthcare === "clinic" ||
-        healthcare === "doctor" ||
-        healthcare === "doctors" ||
-        building === "hospital"
-    ) {
-        return { type: "medical", icon: "✚", label: "Медичний об'єкт" };
+function pointInBuildingRing(lat, lng, ring) {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const yi = Number(ring[i][0]), xi = Number(ring[i][1]);
+        const yj = Number(ring[j][0]), xj = Number(ring[j][1]);
+        const intersects =
+            ((yi > lat) !== (yj > lat)) &&
+            (lng < (xj - xi) * (lat - yi) / ((yj - yi) || 1e-12) + xi);
+        if (intersects) inside = !inside;
+    }
+    return inside;
+}
+
+function isInterestingPoiTags(tags = {}) {
+    const a = String(tags.amenity || "").toLowerCase();
+    const s = String(tags.shop || "").toLowerCase();
+    const h = String(tags.healthcare || "").toLowerCase();
+    return [
+        "pharmacy","hospital","clinic","doctors","fuel",
+        "restaurant","cafe","fast_food","food_court","bar","pub",
+        "vehicle_inspection"
+    ].includes(a) ||
+    ["pharmacy","hospital","clinic","doctor","doctors"].includes(h) ||
+    [
+        "supermarket","convenience","grocery","general","department_store",
+        "mall","greengrocer","bakery","butcher","deli","beverages","alcohol",
+        "car_repair","tyres","car_parts","motorcycle_repair","fuel"
+    ].includes(s);
+}
+
+function attachPoisToCachedBuildings(elements) {
+    if (!Array.isArray(elements)) return false;
+
+    const pois = elements
+        .filter(el =>
+            el && el.tags && isInterestingPoiTags(el.tags) &&
+            Number.isFinite(Number(el.lat)) && Number.isFinite(Number(el.lon))
+        )
+        .map(el => ({
+            id: `${el.type || "node"}/${el.id}`,
+            lat: Number(el.lat),
+            lng: Number(el.lon),
+            tags: el.tags
+        }));
+
+    if (!pois.length) return false;
+
+    let changed = false;
+
+    for (const poi of pois) {
+        for (const cached of buildingMemoryCache.values()) {
+            if (!cached || !Array.isArray(cached.ring) || cached.ring.length < 3) continue;
+            if (pointInBuildingRing(poi.lat, poi.lng, cached.ring)) {
+                cached.poi = poi;
+                changed = true;
+
+                const record = buildingRecords &&
+                    buildingRecords.find(r => r && r.id === cached.id);
+                if (record) {
+                    record.poi = poi;
+                    refreshBuildingTypeMarker(record);
+                    if (record.polygon) {
+                        record.polygon.setPopupContent(buildBuildingPopup(record));
+                    }
+                }
+                break;
+            }
+        }
     }
 
-    if (
-        amenity === "fuel" ||
-        shop === "fuel" ||
-        name.includes("азс")
-    ) {
-        return { type: "fuel", icon: "⛽", label: "АЗС" };
-    }
+    if (changed) saveBuildingGeometryCache();
+    return changed;
+}
+
+
+function classifyBuilding(tags = {}, poi = null) {
+    const merged = { ...(tags || {}), ...((poi && poi.tags) || {}) };
+    const amenity = String(merged.amenity || "").toLowerCase();
+    const shop = String(merged.shop || "").toLowerCase();
+    const healthcare = String(merged.healthcare || "").toLowerCase();
+    const building = String(merged.building || "").toLowerCase();
+    const name = String(merged.name || "").toLowerCase();
 
     if (
-        shop === "car_repair" ||
-        shop === "tyres" ||
-        shop === "car_parts" ||
-        shop === "motorcycle_repair" ||
-        amenity === "vehicle_inspection" ||
-        name.includes("сто") ||
-        name.includes("автосерв") ||
-        name.includes("шиномонтаж")
-    ) {
-        return { type: "service", icon: "🔧", label: "СТО / автосервіс" };
-    }
+        amenity === "pharmacy" || amenity === "hospital" ||
+        amenity === "clinic" || amenity === "doctors" ||
+        healthcare === "pharmacy" || healthcare === "hospital" ||
+        healthcare === "clinic" || healthcare === "doctor" ||
+        healthcare === "doctors" || building === "hospital"
+    ) return { type:"medical", icon:"✚", label:
+        amenity === "pharmacy" || healthcare === "pharmacy" ? "Аптека" :
+        amenity === "hospital" || healthcare === "hospital" || building === "hospital" ? "Лікарня" :
+        "Медичний об'єкт"
+    };
+
+    if (amenity === "fuel" || shop === "fuel" || name.includes("азс"))
+        return { type:"fuel", icon:"⛽", label:"АЗС" };
 
     if (
-        shop === "supermarket" ||
-        shop === "convenience" ||
-        shop === "grocery" ||
-        shop === "general" ||
-        shop === "department_store" ||
-        shop === "mall" ||
-        shop === "greengrocer" ||
-        shop === "bakery" ||
-        shop === "butcher" ||
-        shop === "deli" ||
-        shop === "beverages" ||
-        shop === "alcohol"
-    ) {
-        return { type: "shop", icon: "🛒", label: "Магазин" };
-    }
+        shop === "car_repair" || shop === "tyres" || shop === "car_parts" ||
+        shop === "motorcycle_repair" || amenity === "vehicle_inspection" ||
+        name.includes("сто") || name.includes("автосерв") || name.includes("шиномонтаж")
+    ) return { type:"service", icon:"🔧", label:"СТО / автосервіс" };
 
     if (
-        amenity === "restaurant" ||
-        amenity === "cafe" ||
-        amenity === "fast_food" ||
-        amenity === "food_court" ||
-        amenity === "bar" ||
-        amenity === "pub"
-    ) {
-        return { type: "food", icon: "🍴", label: "Заклад харчування" };
-    }
+        shop === "supermarket" || shop === "convenience" || shop === "grocery" ||
+        shop === "general" || shop === "department_store" || shop === "mall" ||
+        shop === "greengrocer" || shop === "bakery" || shop === "butcher" ||
+        shop === "deli" || shop === "beverages" || shop === "alcohol"
+    ) return { type:"shop", icon:"🛒", label:"Магазин" };
 
-    return { type: "house", icon: "🏠", label: "Будівля" };
+    if (
+        amenity === "restaurant" || amenity === "cafe" ||
+        amenity === "fast_food" || amenity === "food_court" ||
+        amenity === "bar" || amenity === "pub"
+    ) return { type:"food", icon:"🍴", label:"Заклад харчування" };
+
+    return { type:"house", icon:"🏠", label:"Будівля" };
 }
 
 function getBuildingDisplayInfo(record) {
@@ -2624,7 +2675,7 @@ function getBuildingDisplayInfo(record) {
     if (state.isBase) {
         return { type: "base", icon: "🛡️", label: "Твоя Головна База" };
     }
-    return classifyBuilding(record.tags || {});
+    return classifyBuilding(record.tags || {}, record.poi || null);
 }
 
 function createBuildingTypeMarker(record) {
@@ -3157,6 +3208,7 @@ async function updateBiomeFromPosition(lat, lng) {
         }
 
         const data = await response.json();
+            attachPoisToCachedBuildings(data.elements);
         const detectedBiome =
             data.elements && data.elements.length > 0
                 ? "city"
