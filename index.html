@@ -1068,6 +1068,47 @@
     transition:width .25s linear;
 }
 
+
+#buildingLootGrid, #buildingBackpackGrid {
+    display:grid !important;
+    grid-template-columns:repeat(4, minmax(0,1fr)) !important;
+    gap:7px !important;
+}
+@media (max-width:520px) {
+    #buildingLootGrid, #buildingBackpackGrid {
+        grid-template-columns:repeat(3, minmax(0,1fr)) !important;
+    }
+}
+
+
+/* ===== Stranded car ===== */
+.stranded-car-map-icon { background:transparent !important; border:0 !important; }
+.stranded-car-map-icon div {
+    width:38px; height:38px; display:flex; align-items:center; justify-content:center;
+    font-size:27px; border-radius:50%; background:rgba(12,18,24,.88);
+    border:2px solid rgba(255,193,7,.9); box-shadow:0 3px 12px rgba(0,0,0,.55);
+}
+.emergency-unload-modal.show { display:flex !important; }
+.emergency-unload-content { max-width:520px !important; max-height:92vh; overflow:auto; }
+#strandedCarGrid, #strandedBackpackGrid {
+    display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px;
+}
+.transfer-heading { margin:14px 0 8px; font-size:12px; font-weight:900; }
+#strandedLoadSummary {
+    margin:10px 0; padding:9px; border-radius:10px;
+    background:rgba(255,255,255,.06); font-size:11px;
+}
+.load-ok { color:#65e68d; margin-left:5px; }
+.load-over { color:#ffb74d; margin-left:5px; }
+#finishEmergencyUnload, #recoverStrandedCar {
+    width:100%; min-height:44px; margin-top:10px; border:0; border-radius:10px;
+    font-weight:900; cursor:pointer;
+}
+#finishEmergencyUnload:disabled { opacity:.35; cursor:not-allowed; }
+@media(max-width:520px) {
+    #strandedCarGrid, #strandedBackpackGrid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+
 </style>
 </head>
 
@@ -1352,15 +1393,15 @@ const CARRY_SYSTEMS = {
     },
     bicycle: {
         id: "bicycle", name: "Велосипед", icon: "🚲",
-        maxWeight: 60.0, maxVolume: 120.0
+        maxWeight: 60.0, maxVolume: 120.0, thirstMultiplier: 1.35
     },
     cart: {
         id: "cart", name: "Тачка", icon: "🛒",
-        maxWeight: 100.0, maxVolume: 180.0
+        maxWeight: 100.0, maxVolume: 180.0, thirstMultiplier: 1.50
     },
     car: {
         id: "car", name: "Машина", icon: "🚗",
-        maxWeight: 300.0, maxVolume: 500.0
+        maxWeight: 300.0, maxVolume: 500.0, thirstMultiplier: 0.80
     }
 };
 
@@ -1398,6 +1439,20 @@ function ownCarrySystem(id) {
 
 function activateCarrySystem(id) {
     if (!carryState.owned.includes(id) || !CARRY_SYSTEMS[id]) return;
+    if (id === "car" && strandedCar) {
+        const d = distanceToStrandedCar();
+        if (d > STRANDED_CAR_INTERACTION_RADIUS) {
+            showGameMessage(`🚗 Машина залишилась за ${Math.round(d)} м. Потрібно повернутися до неї.`, "error");
+            return;
+        }
+        if (carFuelState.liters <= 0) {
+            openStrandedCar();
+            showGameMessage("⛽ Машину потрібно заправити.", "error");
+            return;
+        }
+        tryRecoverStrandedCar();
+        return;
+    }
     const target = CARRY_SYSTEMS[id];
     const weight = getInventoryWeight();
     const volume = getInventoryVolume();
@@ -1432,13 +1487,395 @@ function renderCarrySystems() {
             <span class="carry-icon">${system.icon}</span>
             <span>
                 <b>${system.name}</b>
-                <small>${system.maxWeight.toFixed(0)} кг · ${system.maxVolume.toFixed(0)} л</small>
+                <small>${system.maxWeight.toFixed(0)} кг · ${system.maxVolume.toFixed(0)} л${id === "car" ? ` · ⛽ ${carFuelState.liters.toFixed(1)}/${CAR_TANK_CAPACITY_L} л` : ""}</small>
             </span>
             ${carryState.active === id ? '<strong>АКТИВНО</strong>' : ''}
         `;
         btn.addEventListener("click", () => activateCarrySystem(id));
         box.appendChild(btn);
     });
+}
+
+
+
+/* =========================================================
+   STRANDED CAR — persistent parked car + emergency unload
+========================================================= */
+const STRANDED_CAR_STORAGE_KEY = "geoGameStrandedCarV1";
+const STRANDED_CAR_INTERACTION_RADIUS = 25;
+const STRANDED_CAR_SLOT_COUNT = 24;
+
+let strandedCar = loadStrandedCar();
+let strandedCarMarker = null;
+let emergencyUnloadOpen = false;
+
+function loadStrandedCar() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(STRANDED_CAR_STORAGE_KEY) || "null");
+        if (!saved || !Number.isFinite(Number(saved.lat)) || !Number.isFinite(Number(saved.lng))) return null;
+        if (!Array.isArray(saved.slots)) saved.slots = Array(STRANDED_CAR_SLOT_COUNT).fill(null);
+        while (saved.slots.length < STRANDED_CAR_SLOT_COUNT) saved.slots.push(null);
+        saved.slots = saved.slots.slice(0, STRANDED_CAR_SLOT_COUNT);
+        return saved;
+    } catch (_) {
+        return null;
+    }
+}
+
+function saveStrandedCar() {
+    if (strandedCar) {
+        localStorage.setItem(STRANDED_CAR_STORAGE_KEY, JSON.stringify(strandedCar));
+    } else {
+        localStorage.removeItem(STRANDED_CAR_STORAGE_KEY);
+    }
+}
+
+function getItemUnitWeight(item) {
+    return Number(item && item.weight || 0);
+}
+function getItemUnitVolume(item) {
+    return item && item.external ? 0 : Number(item && item.volume || 0);
+}
+function inventoryTotalsFor(items) {
+    return items.reduce((a,item) => {
+        a.weight += getItemUnitWeight(item);
+        a.volume += getItemUnitVolume(item);
+        return a;
+    }, {weight:0, volume:0});
+}
+
+function createStrandedCarMarker() {
+    if (!strandedCar || !map) return;
+    if (strandedCarMarker) map.removeLayer(strandedCarMarker);
+
+    const icon = L.divIcon({
+        className: "stranded-car-map-icon",
+        html: '<div>🚗</div>',
+        iconSize: [38,38],
+        iconAnchor: [19,19]
+    });
+
+    strandedCarMarker = L.marker([strandedCar.lat, strandedCar.lng], {
+        icon,
+        zIndexOffset: 900
+    }).addTo(map);
+
+    strandedCarMarker.on("click", () => openStrandedCar());
+}
+
+function strandCarAt(lat, lng) {
+    if (strandedCar) return;
+
+    strandedCar = {
+        lat:Number(lat),
+        lng:Number(lng),
+        createdAt:Date.now(),
+        slots:Array(STRANDED_CAR_SLOT_COUNT).fill(null)
+    };
+    saveStrandedCar();
+    createStrandedCarMarker();
+
+    // Force the player back to the backpack.
+    if (!carryState.owned.includes("backpack")) carryState.owned.unshift("backpack");
+    carryState.active = "backpack";
+    saveCarryState();
+    updateInventoryUI();
+    renderCarrySystems();
+
+    emergencyUnloadOpen = true;
+    renderEmergencyUnload();
+    document.getElementById("emergencyUnloadModal")?.classList.add("show");
+}
+
+function distanceToStrandedCar() {
+    if (!strandedCar || !currentPosition) return Infinity;
+    return getDistance(
+        currentPosition.lat, currentPosition.lng,
+        strandedCar.lat, strandedCar.lng
+    );
+}
+
+function openStrandedCar() {
+    if (!strandedCar) return;
+    const d = distanceToStrandedCar();
+    if (d > STRANDED_CAR_INTERACTION_RADIUS) {
+        showGameMessage(`Машина за ${Math.round(d)} м. Підійди ближче.`, "error");
+        return;
+    }
+    emergencyUnloadOpen = false;
+    const heading = document.querySelector("#emergencyUnloadModal h2");
+    const hint = document.getElementById("strandedUnloadHint");
+    if (heading) heading.textContent = "🚗 Залишена машина";
+    if (hint) hint.textContent = "Тут залишилась твоя машина та речі в ній.";
+    renderEmergencyUnload();
+    document.getElementById("emergencyUnloadModal")?.classList.add("show");
+}
+
+function closeEmergencyUnload() {
+    const backpack = CARRY_SYSTEMS.backpack;
+    const totals = inventoryTotalsFor(inventory);
+
+    // When the car has just run out of fuel, the player cannot leave
+    // until the carried load fits the backpack.
+    if (emergencyUnloadOpen &&
+        (totals.weight > backpack.maxWeight || totals.volume > backpack.maxVolume)) {
+        showGameMessage("Спочатку обери, що залишити в машині. Вантаж має поміститися в рюкзак.", "error");
+        return;
+    }
+
+    emergencyUnloadOpen = false;
+    document.getElementById("emergencyUnloadModal")?.classList.remove("show");
+    updateInventoryUI();
+}
+
+function putItemInStrandedCar(inventoryIndex) {
+    if (!strandedCar) return;
+    const item = inventory[inventoryIndex];
+    if (!item) return;
+
+    let slotIndex = strandedCar.slots.findIndex(slot =>
+        slot && slot.id === item.id && !!slot.external === !!item.external
+    );
+    if (slotIndex < 0) slotIndex = strandedCar.slots.findIndex(slot => !slot);
+    if (slotIndex < 0) {
+        showGameMessage("У машині немає вільних комірок.", "error");
+        return;
+    }
+
+    if (strandedCar.slots[slotIndex]) {
+        strandedCar.slots[slotIndex].quantity =
+            Number(strandedCar.slots[slotIndex].quantity || 1) + 1;
+    } else {
+        strandedCar.slots[slotIndex] = {
+            id:item.id, name:item.name, icon:item.icon || "📦",
+            weight:Number(item.weight || 0), volume:Number(item.volume || 0),
+            external:!!item.external, fuelLiters:item.fuelLiters,
+            quantity:1
+        };
+    }
+
+    inventory.splice(inventoryIndex, 1);
+    saveInventory();
+    saveStrandedCar();
+    updateInventoryUI();
+    renderEmergencyUnload();
+}
+
+function takeItemFromStrandedCar(slotIndex) {
+    if (!strandedCar) return;
+    const item = strandedCar.slots[slotIndex];
+    if (!item) return;
+
+    const backpack = CARRY_SYSTEMS.backpack;
+    const totals = inventoryTotalsFor(inventory);
+    const w = getItemUnitWeight(item);
+    const v = getItemUnitVolume(item);
+
+    if (totals.weight + w > backpack.maxWeight ||
+        totals.volume + v > backpack.maxVolume) {
+        showGameMessage("Це вже не поміститься в рюкзак.", "error");
+        return;
+    }
+
+    inventory.push({
+        id:item.id, name:item.name, icon:item.icon || "📦",
+        weight:w, volume:Number(item.volume || 0),
+        external:!!item.external, fuelLiters:item.fuelLiters,
+        uid:Date.now()
+    });
+
+    item.quantity = Number(item.quantity || 1) - 1;
+    if (item.quantity <= 0) strandedCar.slots[slotIndex] = null;
+
+    saveInventory();
+    saveStrandedCar();
+    updateInventoryUI();
+    renderEmergencyUnload();
+}
+
+function renderEmergencyUnload() {
+    if (!strandedCar) return;
+    const carGrid = document.getElementById("strandedCarGrid");
+    const backpackGrid = document.getElementById("strandedBackpackGrid");
+    const summary = document.getElementById("strandedLoadSummary");
+    const closeBtn = document.getElementById("finishEmergencyUnload");
+    if (!carGrid || !backpackGrid || !summary) return;
+
+    carGrid.innerHTML = "";
+    backpackGrid.innerHTML = "";
+
+    for (let i=0; i<STRANDED_CAR_SLOT_COUNT; i++) {
+        const item = strandedCar.slots[i];
+        const cell = document.createElement(item ? "button" : "div");
+        cell.className = "building-loot-cell" + (item ? "" : " empty");
+        if (item) {
+            cell.innerHTML = `<div class="loot-icon">${item.icon || "📦"}</div>
+                <div class="loot-name">${item.name}</div>
+                <div class="loot-count">×${Number(item.quantity || 1)}</div>`;
+            cell.addEventListener("click", () => takeItemFromStrandedCar(i));
+        }
+        carGrid.appendChild(cell);
+    }
+
+    const groups = [];
+    inventory.forEach(item => {
+        let g = groups.find(x => x.item.id === item.id && !!x.item.external === !!item.external);
+        if (!g) { g={item,count:0}; groups.push(g); }
+        g.count++;
+    });
+
+    groups.slice(0,24).forEach(g => {
+        const cell = document.createElement("button");
+        cell.className = "building-loot-cell";
+        cell.innerHTML = `<div class="loot-icon">${g.item.icon || "📦"}</div>
+            <div class="loot-name">${g.item.name}</div>
+            <div class="loot-count">×${g.count}</div>`;
+        cell.addEventListener("click", () => {
+            const idx = inventory.findIndex(x =>
+                x.id === g.item.id && !!x.external === !!g.item.external
+            );
+            if (idx >= 0) putItemInStrandedCar(idx);
+        });
+        backpackGrid.appendChild(cell);
+    });
+    for (let i=Math.min(groups.length,24); i<24; i++) {
+        const empty=document.createElement("div");
+        empty.className="building-loot-cell empty";
+        backpackGrid.appendChild(empty);
+    }
+
+    const totals = inventoryTotalsFor(inventory);
+    const bp = CARRY_SYSTEMS.backpack;
+    const fits = totals.weight <= bp.maxWeight && totals.volume <= bp.maxVolume;
+    summary.innerHTML =
+        `🎒 Рюкзак: <b>${totals.weight.toFixed(1)}/${bp.maxWeight.toFixed(0)} кг</b> · ` +
+        `<b>${totals.volume.toFixed(1)}/${bp.maxVolume.toFixed(0)} л</b>` +
+        (fits ? ' <span class="load-ok">✓ можна йти</span>' :
+                ' <span class="load-over">⚠ забагато вантажу</span>');
+
+    if (closeBtn) {
+        closeBtn.disabled = emergencyUnloadOpen && !fits;
+        closeBtn.textContent = emergencyUnloadOpen ? "🎒 Взяти рюкзак і йти пішки" : "Закрити";
+    }
+}
+
+function tryRecoverStrandedCar() {
+    if (!strandedCar) return;
+    if (distanceToStrandedCar() > STRANDED_CAR_INTERACTION_RADIUS) {
+        showGameMessage("Підійди ближче до машини.", "error");
+        return;
+    }
+    if (carFuelState.liters <= 0) {
+        showGameMessage("Спочатку заправ машину пальним.", "error");
+        return;
+    }
+    strandedCar = null;
+    saveStrandedCar();
+    if (strandedCarMarker) {
+        map.removeLayer(strandedCarMarker);
+        strandedCarMarker = null;
+    }
+    carryState.active = "car";
+    saveCarryState();
+    document.getElementById("emergencyUnloadModal")?.classList.remove("show");
+    updateInventoryUI();
+    renderCarrySystems();
+    showGameMessage("🚗 Машина знову готова до руху.", "success");
+}
+
+/* ===== CAR FUEL ===== */
+const CAR_FUEL_STORAGE_KEY = "geoGameCarFuelV1";
+const CAR_TANK_CAPACITY_L = 50;
+const CAR_CONSUMPTION_L_PER_100KM = 10;
+
+let carFuelState = loadCarFuelState();
+let lastFuelGpsPoint = null;
+let fuelEmptyWarned = false;
+
+function loadCarFuelState() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(CAR_FUEL_STORAGE_KEY) || "{}");
+        return { liters: Math.max(0, Math.min(CAR_TANK_CAPACITY_L, Number(saved.liters) || 0)) };
+    } catch (_) {
+        return { liters:0 };
+    }
+}
+function saveCarFuelState() {
+    localStorage.setItem(CAR_FUEL_STORAGE_KEY, JSON.stringify(carFuelState));
+}
+function isFuelItem(item) {
+    return !!item && (
+        String(item.id || "").toLowerCase() === "fuel" ||
+        String(item.name || "").trim().toLowerCase() === "пальне"
+    );
+}
+function refuelCarFromInventoryIndex(index) {
+    const item = inventory[index];
+    if (!isFuelItem(item)) return;
+    if (!carryState.owned.includes("car")) {
+        showGameMessage("Спочатку потрібно знайти машину.", "error");
+        return;
+    }
+    if (carFuelState.liters >= CAR_TANK_CAPACITY_L - 0.01) {
+        showGameMessage("Бак уже повний.", "error");
+        return;
+    }
+    const liters = Number(item.fuelLiters || 5);
+    const added = Math.min(liters, CAR_TANK_CAPACITY_L - carFuelState.liters);
+    carFuelState.liters += added;
+    inventory.splice(index, 1);
+    saveCarFuelState();
+    saveInventory();
+    updateInventoryUI();
+    renderCarrySystems();
+    if (strandedCar && distanceToStrandedCar() <= STRANDED_CAR_INTERACTION_RADIUS) {
+        renderEmergencyUnload();
+    }
+    closeInventoryItemActions();
+    showGameMessage(`⛽ Заправлено ${added.toFixed(1)} л`, "success");
+}
+function consumeCarFuelByGps(position, speedKmh) {
+    if (carryState.active !== "car") {
+        lastFuelGpsPoint = null;
+        return;
+    }
+    const lat = Number(position.coords.latitude);
+    const lng = Number(position.coords.longitude);
+    const acc = Number(position.coords.accuracy);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || acc > 50) return;
+
+    if (carFuelState.liters <= 0) {
+        if (speedKmh > 3 && !fuelEmptyWarned) {
+            showGameMessage("⛽ У машині немає пального. Заправ її з інвентарю.", "error");
+            fuelEmptyWarned = true;
+        }
+        lastFuelGpsPoint = {lat,lng};
+        return;
+    }
+    fuelEmptyWarned = false;
+    if (!lastFuelGpsPoint) {
+        lastFuelGpsPoint = {lat,lng};
+        return;
+    }
+    const previousFuelPoint = {...lastFuelGpsPoint};
+    const meters = getDistance(previousFuelPoint.lat, previousFuelPoint.lng, lat, lng);
+    lastFuelGpsPoint = {lat,lng};
+    if (!Number.isFinite(meters) || meters < 3 || meters > 1000 || speedKmh < 3) return;
+
+    const litersUsed = (meters / 100000) * CAR_CONSUMPTION_L_PER_100KM;
+    const fuelBefore = carFuelState.liters;
+    carFuelState.liters = Math.max(0, carFuelState.liters - litersUsed);
+
+    if (fuelBefore > 0 && carFuelState.liters <= 0 && litersUsed > 0) {
+        // Approximate the point along the latest GPS segment where the tank became empty.
+        const fraction = Math.max(0, Math.min(1, fuelBefore / litersUsed));
+        const stopLat = previousFuelPoint.lat + (lat - previousFuelPoint.lat) * fraction;
+        const stopLng = previousFuelPoint.lng + (lng - previousFuelPoint.lng) * fraction;
+        strandCarAt(stopLat, stopLng);
+    }
+
+    saveCarFuelState();
+    renderCarrySystems();
 }
 
 const INVENTORY_STORAGE_KEY = "geoGameInventory";
@@ -1510,7 +1947,8 @@ const FUEL_ITEM = {
     icon: "⛽",
     weight: 5.0,
     volume: 5.0,
-    external: false
+    external: false,
+    fuelLiters: 5
 };
 
 function generateLootForBuilding(record) {
@@ -1647,7 +2085,7 @@ function drinkWaterFromInventoryIndex(index) {
 function openInventoryItemActions(item, index) {
     closeInventoryItemActions();
 
-    if (!isWaterItem(item) && !isFoodItem(item)) return false;
+    if (!isWaterItem(item) && !isFoodItem(item) && !isFuelItem(item)) return false;
 
     const menu = document.createElement("div");
     menu.id = "inventoryItemActions";
@@ -1671,6 +2109,12 @@ function openInventoryItemActions(item, index) {
         use.addEventListener("click", (event) => {
             event.stopPropagation();
             eatFoodFromInventoryIndex(index);
+        });
+     else if (isFuelItem(item)) {
+        use.textContent = "⛽ Заправити машину";
+        use.addEventListener("click", (event) => {
+            event.stopPropagation();
+            refuelCarFromInventoryIndex(index);
         });
     }
 
@@ -1745,11 +2189,12 @@ function renderBackpackGrid() {
             }
         });
         cell.addEventListener("click", (event) => {
-            if (typeof item !== "undefined" && (isWaterItem(item) || isFoodItem(item))) {
+            if (typeof item !== "undefined" && (isWaterItem(item) || isFoodItem(item) || isFuelItem(item))) {
                 event.stopPropagation();
                 const idx = inventory.findIndex(inv =>
                 (isWaterItem(item) && isWaterItem(inv)) ||
-                (isFoodItem(item) && isFoodItem(inv))
+                (isFoodItem(item) && isFoodItem(inv)) ||
+                (isFuelItem(item) && isFuelItem(inv))
             );
                 if (idx >= 0) openInventoryItemActions(item, idx);
             }
@@ -2821,6 +3266,12 @@ function handlePosition(
     speedElement.textContent =
         speed.toFixed(1);
 
+    survivalCurrentSpeedKmh = speed;
+    updateSurvivalThirst(speed);
+    updateSurvivalHunger(speed);
+    updateHealthAndRest(speed);
+    consumeCarFuelByGps(position, speed);
+
 
     /*
         AUTOMATIC BIOME DETECTION
@@ -3421,6 +3872,7 @@ function searchBuilding(record) {
         saveBuildingStates();
     }
 
+    ensureBuildingSlots(record);
     openBuildingLootModal(record);
 }
 
@@ -3466,119 +3918,162 @@ function setBuildingLootMessage(message, type = "") {
 }
 
 
-function renderBuildingBackpackGrid(record) {
+
+/* =========================================================
+   24 PERSISTENT PHYSICAL SLOTS PER BUILDING
+========================================================= */
+const BUILDING_SLOT_COUNT = 24;
+
+function ensureBuildingSlots(record) {
+    const state = getBuildingState(record);
+    if (!Array.isArray(state.slots) || state.slots.length !== BUILDING_SLOT_COUNT) {
+        const slots = Array(BUILDING_SLOT_COUNT).fill(null);
+        const oldItems = [];
+        for (const stack of (state.loot || [])) oldItems.push({...stack});
+        for (const stack of (state.storedItems || [])) oldItems.push({...stack});
+        oldItems.slice(0, BUILDING_SLOT_COUNT).forEach((item, i) => slots[i] = item);
+        state.slots = slots;
+        state.loot = [];
+        state.storedItems = [];
+        buildingStates[record.id] = state;
+        saveBuildingStates();
+    }
+    return state;
+}
+
+function buildingSlotItemCount(state) {
+    return (state.slots || []).reduce((sum, item) => sum + (item ? Number(item.quantity || 1) : 0), 0);
+}
+
+function moveInventoryItemToBuildingSlot(record, inventoryIndex) {
+    const state = ensureBuildingSlots(record);
+    const item = inventory[inventoryIndex];
+    if (!item) return;
+    let slotIndex = state.slots.findIndex(slot => !slot);
+    if (slotIndex < 0) {
+        setBuildingLootMessage("У будівлі немає вільних комірок.", "error");
+        return;
+    }
+    const existingIndex = state.slots.findIndex(slot =>
+        slot && slot.id === item.id && !!slot.external === !!item.external &&
+        !slot.specialCarrySystem
+    );
+    if (existingIndex >= 0) slotIndex = existingIndex;
+
+    if (state.slots[slotIndex]) {
+        state.slots[slotIndex].quantity = Number(state.slots[slotIndex].quantity || 1) + 1;
+    } else {
+        state.slots[slotIndex] = {
+            id:item.id, name:item.name, icon:item.icon || "📦",
+            weight:Number(item.weight || 0), volume:Number(item.volume || 0),
+            external:!!item.external, quantity:1
+        };
+    }
+    inventory.splice(inventoryIndex, 1);
+    saveInventory();
+    saveBuildingStates();
+    updateInventoryUI();
+    renderBuildingLootModal();
+}
+
+function takeBuildingSlot(record, slotIndex) {
+    const state = ensureBuildingSlots(record);
+    const item = state.slots[slotIndex];
+    if (!item) return;
+
+    if (item.specialCarrySystem && item.carrySystemId) {
+        ownCarrySystem(item.carrySystemId);
+        state.slots[slotIndex] = null;
+        saveBuildingStates();
+        renderBuildingLootModal();
+        return;
+    }
+    if (!canAddItem(Number(item.weight || 0), item.external ? 0 : Number(item.volume || 0))) {
+        setBuildingLootMessage("Немає місця у твоєму інвентарі.", "error");
+        return;
+    }
+    addItem({
+        id:item.id, name:item.name, icon:item.icon,
+        weight:Number(item.weight || 0), volume:Number(item.volume || 0),
+        external:!!item.external,
+        fuelLiters:item.fuelLiters
+    });
+    item.quantity = Number(item.quantity || 1) - 1;
+    if (item.quantity <= 0) state.slots[slotIndex] = null;
+    state.isDepleted = buildingSlotItemCount(state) === 0;
+    saveBuildingStates();
+    renderBuildingLootModal();
+    updateInventoryUI();
+    if (record.polygon) record.polygon.setPopupContent(buildBuildingPopup(record));
+}
+
+function renderBuildingLootModalV2() {
+    if (!activeLootBuilding) return;
+    const state = ensureBuildingSlots(activeLootBuilding);
+    const grid = document.getElementById("buildingLootGrid");
+    grid.innerHTML = "";
+
+    for (let i = 0; i < BUILDING_SLOT_COUNT; i++) {
+        const item = state.slots[i];
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "building-loot-cell" + (item ? "" : " empty");
+        if (item) {
+            cell.innerHTML = `
+                <div class="loot-icon">${item.icon || "📦"}</div>
+                <div class="loot-name">${item.name}</div>
+                <div class="loot-count">×${Number(item.quantity || 1)}</div>`;
+            cell.addEventListener("click", () => takeBuildingSlot(activeLootBuilding, i));
+        } else {
+            cell.innerHTML = `<div style="opacity:.22;font-size:20px;">＋</div>`;
+            cell.disabled = true;
+        }
+        grid.appendChild(cell);
+    }
+
+    const takeAll = document.getElementById("takeAllBuildingLoot");
+    if (takeAll) takeAll.disabled = buildingSlotItemCount(state) === 0;
+    setBuildingLootMessage(
+        buildingSlotItemCount(state) ? "Натисни на предмет, щоб перемістити його до себе." : "📭 Тут порожньо."
+    );
+    renderBuildingBackpackGridV2(activeLootBuilding);
+}
+
+function renderBuildingBackpackGridV2(record) {
     const grid = document.getElementById("buildingBackpackGrid");
     if (!grid) return;
     grid.innerHTML = "";
-
-    // Stack identical inventory items visually, same principle as backpack.
     const groups = [];
-    inventory.forEach((item, inventoryIndex) => {
-        let group = groups.find(g =>
-            g.item.id === item.id &&
-            !!g.item.external === !!item.external
-        );
-        if (!group) {
-            group = { item, indices:[] };
-            groups.push(group);
-        }
-        group.indices.push(inventoryIndex);
+    inventory.forEach(item => {
+        let g = groups.find(x => x.item.id === item.id && !!x.item.external === !!item.external);
+        if (!g) { g = {item, count:0}; groups.push(g); }
+        g.count++;
     });
-
-    groups.forEach(group => {
-        const item = group.item;
+    for (const g of groups.slice(0,24)) {
         const cell = document.createElement("button");
         cell.type = "button";
         cell.className = "building-loot-cell";
-        cell.innerHTML = `
-            <div class="loot-icon">${item.icon || "📦"}</div>
-            <div class="loot-name">${item.name}</div>
-            <div class="loot-count">×${group.indices.length}</div>
-        `;
-        cell.title = "Натисніть, щоб перемістити в будівлю";
+        cell.innerHTML = `<div class="loot-icon">${g.item.icon || "📦"}</div>
+            <div class="loot-name">${g.item.name}</div><div class="loot-count">×${g.count}</div>`;
         cell.addEventListener("click", () => {
-            // Always resolve a current index because inventory changes after each transfer.
-            const currentIndex = inventory.findIndex(inv =>
-                inv.id === item.id &&
-                !!inv.external === !!item.external
-            );
-            if (currentIndex >= 0) putInventoryItemInBuilding(record, currentIndex);
+            const idx = inventory.findIndex(x => x.id === g.item.id && !!x.external === !!g.item.external);
+            if (idx >= 0) moveInventoryItemToBuildingSlot(record, idx);
         });
         grid.appendChild(cell);
-    });
-
-    // Fill visually to the same 24-cell layout.
-    for (let i = groups.length; i < 24; i++) {
+    }
+    for (let i = Math.min(groups.length,24); i < 24; i++) {
         const empty = document.createElement("div");
         empty.className = "building-loot-cell empty";
         grid.appendChild(empty);
     }
 }
 
+function renderBuildingBackpackGrid(record) {
+    return renderBuildingBackpackGridV2(record);
+}
+
 function renderBuildingLootModal() {
-    if (!activeLootBuilding) return;
-
-    const state = getBuildingLootState(activeLootBuilding);
-    const grid = document.getElementById("buildingLootGrid");
-    grid.innerHTML = "";
-
-    const loot = state.loot || [];
-    const visibleSlots = 12;
-
-    for (let i = 0; i < visibleSlots; i++) {
-        const item = loot[i];
-        const cell = document.createElement("button");
-        cell.type = "button";
-        cell.className = "building-loot-cell" + (item ? "" : " empty");
-
-        if (item) {
-            const qty = item.quantity || 1;
-            cell.innerHTML = `
-                <div class="loot-icon">${item.icon || "📦"}</div>
-                <div class="loot-name">${item.name}</div>
-                <div class="loot-count">×${qty}</div>
-            `;
-            cell.title = "Натисніть, щоб забрати 1 предмет";
-            cell.addEventListener("click", () => takeOneBuildingLoot(i));
-        } else {
-            cell.innerHTML = `<div style="opacity:.35;font-size:24px;">＋</div>`;
-            cell.disabled = true;
-        }
-
-        grid.appendChild(cell);
-    }
-
-    const takeAll = document.getElementById("takeAllBuildingLoot");
-    takeAll.disabled = buildingLootRemaining(state) === 0;
-
-    if (buildingLootRemaining(state) === 0) {
-        setBuildingLootMessage("📭 Тут більше нічого немає.");
-    } else {
-        setBuildingLootMessage(
-            "Натисніть на предмет, щоб забрати його окремо, або «Забрати все»."
-        );
-    }
-const persistentState = getBuildingState(activeBuildingLootRecord);
-    if (persistentState && Array.isArray(persistentState.storedItems)) {
-        const grid = document.getElementById("buildingLootGrid");
-        persistentState.storedItems.forEach((item, storedIndex) => {
-            const cell = document.createElement("button");
-            cell.type = "button";
-            cell.className = "building-loot-cell building-stored-cell";
-            cell.innerHTML = `
-                <div class="loot-icon">${item.icon || "📦"}</div>
-                <div class="loot-name">${item.name}</div>
-                <div class="loot-count">×${Number(item.quantity || 1)}</div>
-            `;
-            cell.title = "Залишено вами · натисніть, щоб забрати";
-            cell.addEventListener("click", () =>
-                takeStoredBuildingItem(activeBuildingLootRecord, storedIndex)
-            );
-            grid.appendChild(cell);
-        });
-    }
-
-    renderBuildingBackpackGrid(activeBuildingLootRecord);
+    return renderBuildingLootModalV2();
 }
 
 function finalizeBuildingLootState(record, state) {
@@ -3647,58 +4142,15 @@ function takeOneBuildingLoot(index) {
 
 function takeAllBuildingLoot() {
     if (!activeLootBuilding) return;
-
-    const state = getBuildingLootState(activeLootBuilding);
-    const remaining = [];
-
+    const state = ensureBuildingSlots(activeLootBuilding);
     let taken = 0;
-
-    for (const original of state.loot) {
-        const item = { ...original };
-        let qty = item.quantity || 1;
-
-        while (qty > 0) {
-            if (!canAddItem(item.weight, item.volume)) break;
-
-            addItem({
-                id: item.id,
-                name: item.name,
-                icon: item.icon,
-                weight: item.weight,
-                volume: item.volume,
-                external: !!item.external
-            });
-
-            qty--;
-            taken++;
-        }
-
-        if (qty > 0) {
-            item.quantity = qty;
-            remaining.push(item);
-        }
+    for (let i = 0; i < state.slots.length; i++) {
+        const before = buildingSlotItemCount(state);
+        if (state.slots[i]) takeBuildingSlot(activeLootBuilding, i);
+        const after = buildingSlotItemCount(state);
+        if (after < before) taken += before - after;
     }
-
-    state.loot = remaining;
-
-    if (taken === 0 && buildingLootRemaining(state) > 0) {
-        setBuildingLootMessage(
-            "Немає місця в рюкзаку. Заберіть окремі предмети або звільніть місце.",
-            "error"
-        );
-    } else if (buildingLootRemaining(state) > 0) {
-        setBuildingLootMessage(
-            `Забрано предметів: ${taken}. Решта не помістилася в рюкзак.`,
-            "error"
-        );
-    } else {
-        setBuildingLootMessage(
-            `Усе забрано. Предметів: ${taken}.`,
-            "success"
-        );
-    }
-
-    finalizeBuildingLootState(activeLootBuilding, state);
+    setBuildingLootMessage(taken ? `Забрано предметів: ${taken}.` : "Нічого не вдалося забрати.", taken ? "success" : "error");
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -5046,7 +5498,12 @@ function loadSurvivalState() {
         const saved = JSON.parse(localStorage.getItem(SURVIVAL_STORAGE_KEY) || "{}");
         return {
             thirst: Number.isFinite(Number(saved.thirst)) ? Math.max(0, Math.min(100, Number(saved.thirst))) : 100,
-            lastUpdate: Number(saved.lastUpdate) || now
+            lastUpdate: Number(saved.lastUpdate) || now,
+            hunger: Number.isFinite(Number(saved.hunger)) ? Math.max(0, Math.min(100, Number(saved.hunger))) : 100,
+            hungerLastUpdate: Number(saved.hungerLastUpdate) || now,
+            health: Number.isFinite(Number(saved.health)) ? Math.max(0, Math.min(100, Number(saved.health))) : 100,
+            healthLastUpdate: Number(saved.healthLastUpdate) || now,
+            stationarySince: Number(saved.stationarySince) || now
         };
     } catch (_) {
         return { thirst:100, lastUpdate:now, hunger:100, hungerLastUpdate:now };
@@ -5071,7 +5528,14 @@ function updateSurvivalThirst(speedKmh = survivalCurrentSpeedKmh) {
     // Time while the app was closed is conservatively treated as rest.
     // Live GPS movement changes the rate while the game is open.
     const mode = getThirstMode(speedKmh);
-    const drainPerHour = 100 / mode.hours;
+    const carry = getActiveCarrySystem();
+    let multiplier = 1;
+    if (speedKmh >= 1.5) {
+        if (carry.id === "bicycle") multiplier = 1.35;
+        else if (carry.id === "cart") multiplier = 1.50;
+        else if (carry.id === "car") multiplier = 0.80;
+    }
+    const drainPerHour = (100 / mode.hours) * multiplier;
     survivalState.thirst = Math.max(0, survivalState.thirst - elapsedHours * drainPerHour);
     survivalState.lastUpdate = now;
     saveSurvivalState();
@@ -5208,6 +5672,68 @@ window.addEventListener("beforeunload", () =>
 
 updateSurvivalHunger(0);
 renderHungerHUD();
+
+
+/* =========================================================
+   HEALTH + REST
+   Thirst at 0 damages HP quickly; hunger at 0 much slower.
+   Staying nearly stationary for 30 min starts recovery.
+========================================================= */
+const REST_START_MINUTES = 30;
+const REST_HEAL_PER_HOUR = 5;
+const DEHYDRATION_DAMAGE_PER_HOUR = 5;
+const STARVATION_DAMAGE_PER_HOUR = 1;
+
+function renderHealthHUD() {
+    const hp = document.getElementById("hp");
+    const fill = document.querySelector(".hp-fill");
+    const value = Math.max(0, Math.min(100, Number(survivalState.health ?? 100)));
+    if (hp) hp.textContent = Math.round(value);
+    if (fill) fill.style.width = `${value}%`;
+}
+
+function updateHealthAndRest(speedKmh = survivalCurrentSpeedKmh) {
+    const now = Date.now();
+    const last = Number(survivalState.healthLastUpdate) || now;
+    const elapsedHours = Math.max(0, Math.min(now - last, 3600000)) / 3600000;
+
+    if (!Number.isFinite(Number(survivalState.health))) survivalState.health = 100;
+    if (!Number(survivalState.stationarySince)) survivalState.stationarySince = now;
+
+    if (speedKmh < 1.5) {
+        // remains resting
+    } else {
+        survivalState.stationarySince = now;
+    }
+
+    let delta = 0;
+    if (Number(survivalState.thirst) <= 0) delta -= DEHYDRATION_DAMAGE_PER_HOUR * elapsedHours;
+    if (Number(survivalState.hunger) <= 0) delta -= STARVATION_DAMAGE_PER_HOUR * elapsedHours;
+
+    const stationaryMinutes = (now - survivalState.stationarySince) / 60000;
+    const canRecover =
+        stationaryMinutes >= REST_START_MINUTES &&
+        Number(survivalState.thirst) > 20 &&
+        Number(survivalState.hunger) > 20 &&
+        delta >= 0;
+
+    if (canRecover && survivalState.health < 100) {
+        delta += REST_HEAL_PER_HOUR * elapsedHours;
+    }
+
+    survivalState.health = Math.max(0, Math.min(100, survivalState.health + delta));
+    survivalState.healthLastUpdate = now;
+    saveSurvivalState();
+    renderHealthHUD();
+}
+
+setInterval(() => updateHealthAndRest(survivalCurrentSpeedKmh), 30000);
+
+
+
+setTimeout(() => {
+    if (strandedCar && typeof map !== "undefined" && map) createStrandedCarMarker();
+}, 500);
 </script>
 
 
@@ -5223,6 +5749,24 @@ renderHungerHUD();
         <div id="buildingLootGrid"></div>
         <div id="buildingLootMessage"></div>
         <button id="takeAllBuildingLoot">🎒 Забрати все</button>
+    </div>
+</div>
+
+
+<div id="emergencyUnloadModal" class="modal emergency-unload-modal">
+    <div class="modal-content emergency-unload-content">
+        <h2>⛽ Пальне закінчилось</h2>
+        <p id="strandedUnloadHint">Машина залишається тут. Обери, що взяти з собою в рюкзак, а що залишити в машині.</p>
+        <div id="strandedLoadSummary"></div>
+
+        <div class="transfer-heading">🚗 Машина</div>
+        <div id="strandedCarGrid" class="building-loot-grid"></div>
+
+        <div class="transfer-heading">🎒 З собою</div>
+        <div id="strandedBackpackGrid" class="building-loot-grid"></div>
+
+        <button id="recoverStrandedCar" type="button" onclick="tryRecoverStrandedCar()">🚗 Поїхати на машині</button>
+        <button id="finishEmergencyUnload" type="button" onclick="closeEmergencyUnload()">🎒 Взяти рюкзак і йти пішки</button>
     </div>
 </div>
 
