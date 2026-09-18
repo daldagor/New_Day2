@@ -3889,12 +3889,20 @@ function buildBuildingPopup(record) {
 
     const title = document.createElement("div");
     title.className = "building-popup-title";
-    title.textContent = state.isBase ? "🏠 Твоя Головна База" : state.isDepleted ? ((state.storedItems && state.storedItems.length) ? "📦 У будівлі залишені предмети" : "📭 Будівля порожня") : "${displayInfo.icon} Об’єкт: ${displayInfo.label}";
+    if (state.isBase) {
+        title.textContent = "🏠 Твоя Головна База";
+    } else if (state.lootGenerated) {
+        title.textContent = "📭 Обшукано: " + displayInfo.label;
+    } else {
+        title.textContent = `${displayInfo.icon} Об’єкт: ${displayInfo.label}`;
+    }
     root.appendChild(title);
 
     const distanceEl = document.createElement("div");
     distanceEl.className = "building-popup-distance";
-    distanceEl.textContent = Number.isFinite(distance) ? `Відстань: ${Math.round(distance)} м` : "Очікування GPS-позиції…";
+    distanceEl.textContent = Number.isFinite(distance)
+        ? `Відстань: ${Math.round(distance)} м`
+        : "Очікування GPS-позиції…";
     root.appendChild(distanceEl);
 
     const actions = document.createElement("div");
@@ -3903,18 +3911,51 @@ function buildBuildingPopup(record) {
 
     if (state.isBase) {
         const allowed = distance <= BASE_PROTECTION_RADIUS;
-        const btn = popupButton("📦 Склад Бази", "storage", !allowed, () => openBaseStorage(record));
-        actions.appendChild(btn);
-        if (!allowed) addPopupWarning(root, Number.isFinite(distance) ? "Потрібно увійти в зону захисту" : "Потрібно визначити GPS-позицію");
-    } else if (!state.isDepleted) {
-        const allowed = distance < BUILDING_INTERACTION_RADIUS;
-        actions.appendChild(popupButton("🔍 Обшукати", "search", !allowed, () => searchBuilding(record)));
-        actions.appendChild(popupButton("🛡️ Захопити", "capture", !allowed, () => captureBuilding(record)));
+        actions.appendChild(
+            popupButton("📦 Склад Бази", "storage", !allowed, () => openBaseStorage(record))
+        );
         if (!allowed) {
-            const extra = Number.isFinite(distance) ? Math.max(1, Math.ceil(distance - BUILDING_INTERACTION_RADIUS)) : null;
-            addPopupWarning(root, extra === null ? "Потрібно визначити GPS-позицію" : `Занадто далеко. Підійдіть ближче на ${extra} метрів`);
+            addPopupWarning(
+                root,
+                Number.isFinite(distance)
+                    ? "Потрібно увійти в зону захисту"
+                    : "Потрібно визначити GPS-позицію"
+            );
         }
+        return root;
     }
+
+    const allowed = distance < BUILDING_INTERACTION_RADIUS;
+
+    /*
+       "Searched" only controls loot generation.
+       It must NEVER disable the building itself.
+    */
+    actions.appendChild(
+        popupButton(
+            state.lootGenerated ? "📦 Відкрити будівлю" : "🔍 Обшукати",
+            "search",
+            !allowed,
+            () => searchBuilding(record)
+        )
+    );
+
+    actions.appendChild(
+        popupButton("🛡️ Зробити базою", "capture", !allowed, () => captureBuilding(record))
+    );
+
+    if (!allowed) {
+        const extra = Number.isFinite(distance)
+            ? Math.max(1, Math.ceil(distance - BUILDING_INTERACTION_RADIUS))
+            : null;
+        addPopupWarning(
+            root,
+            extra === null
+                ? "Потрібно визначити GPS-позицію"
+                : `Занадто далеко. Підійдіть ближче на ${extra} метрів`
+        );
+    }
+
     return root;
 }
 
