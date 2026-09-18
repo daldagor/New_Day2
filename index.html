@@ -601,12 +601,12 @@
             </div>
 
 
-            <button
+            <div
                 id="biomeButton"
-                class="hud-button"
+                class="hud-chip"
             >
-                🏙 Місто
-            </button>
+                🛰 Визначення місцевості...
+            </div>
 
 
             <div
@@ -756,6 +756,16 @@ let currentBiome =
     localStorage.getItem(
         BIOME_STORAGE_KEY
     ) || "city";
+
+/*
+    Automatic biome detection state.
+    We query OpenStreetMap via Overpass only after
+    the player moves far enough, not on every GPS tick.
+*/
+let lastBiomeCheckPosition = null;
+let biomeCheckInProgress = false;
+const BIOME_CHECK_DISTANCE = 75;
+const BIOME_SEARCH_RADIUS = 120;
 
 
 let flashlightEnabled =
@@ -1198,6 +1208,16 @@ function handlePosition(
 
 
     /*
+        AUTOMATIC BIOME DETECTION
+    */
+
+    updateBiomeFromPosition(
+        latitude,
+        longitude
+    );
+
+
+    /*
         VISION
     */
 
@@ -1371,77 +1391,102 @@ flashlightButton
 
 
 /* =========================================================
-   BIOME MVP SWITCH
+   AUTOMATIC BIOME DETECTION — OPENSTREETMAP / OVERPASS
 ========================================================= */
 
-/*
-    OSM tile images do NOT expose
-    underlying OSM tags.
+async function updateBiomeFromPosition(lat, lng) {
 
-    For MVP this button simulates
-    city / open terrain.
+    if (biomeCheckInProgress) {
+        return;
+    }
 
-    Later this function can be
-    replaced by Overpass API data.
-*/
+    if (lastBiomeCheckPosition) {
+        const moved = getDistance(
+            lastBiomeCheckPosition.lat,
+            lastBiomeCheckPosition.lng,
+            lat,
+            lng
+        );
 
-biomeButton
-.addEventListener(
-    "click",
-    function () {
-
-        if (
-            currentBiome ===
-            "city"
-        ) {
-
-            currentBiome =
-                "field";
-
+        if (moved < BIOME_CHECK_DISTANCE) {
+            return;
         }
-        else {
+    }
 
-            currentBiome =
-                "city";
+    biomeCheckInProgress = true;
+    biomeButton.textContent = "🛰 Визначення місцевості...";
 
+    try {
+        const query = `[out:json][timeout:10];(
+          nwr(around:${BIOME_SEARCH_RADIUS},${lat},${lng})[building];
+          nwr(around:${BIOME_SEARCH_RADIUS},${lat},${lng})[landuse~"residential|commercial|industrial|retail|construction"];
+          nwr(around:${BIOME_SEARCH_RADIUS},${lat},${lng})[place~"city|town|suburb|neighbourhood|quarter"];
+        );out tags qt;`;
+
+        const response = await fetch(
+            "https://overpass-api.de/api/interpreter",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+                },
+                body: "data=" + encodeURIComponent(query)
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Overpass HTTP " + response.status);
         }
 
+        const data = await response.json();
+        const detectedBiome =
+            data.elements && data.elements.length > 0
+                ? "city"
+                : "field";
+
+        const biomeChanged = detectedBiome !== currentBiome;
+        currentBiome = detectedBiome;
 
         localStorage.setItem(
             BIOME_STORAGE_KEY,
             currentBiome
         );
 
+        lastBiomeCheckPosition = { lat, lng };
 
         /*
-            Biome changed,
-            so current exploration
-            radius can change.
+            If biome changes, redraw immediately and save
+            the new visibility circle without closing any
+            previously explored territory.
         */
-
-        if (currentPosition) {
-
+        if (biomeChanged && currentPosition) {
             saveExploredPointIfNeeded(
-
                 currentPosition.lat,
-
                 currentPosition.lng,
-
                 getCurrentVisionRadius(),
-
                 true
-
             );
-
         }
 
-
         updateHUD();
-
         drawFog();
 
     }
-);
+    catch (error) {
+        console.warn(
+            "Не вдалося автоматично визначити біом:",
+            error
+        );
+
+        /*
+            On network/API failure keep the last known biome.
+        */
+        updateHUD();
+    }
+    finally {
+        biomeCheckInProgress = false;
+    }
+}
 
 
 /* =========================================================
@@ -1485,7 +1530,7 @@ function updateHUD() {
     ) {
 
         biomeButton.textContent =
-            "🏙 Місто";
+            "🏙 Місто · авто";
 
         biomeButton
             .classList
@@ -1497,7 +1542,7 @@ function updateHUD() {
     else {
 
         biomeButton.textContent =
-            "🌾 Поле";
+            "🌾 Поле · авто";
 
         biomeButton
             .classList
