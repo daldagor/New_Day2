@@ -2151,7 +2151,7 @@ function openInventoryItemActions(item, index) {
             event.stopPropagation();
             eatFoodFromInventoryIndex(index);
         });
-     else if (isFuelItem(item)) {
+    } else if (isFuelItem(item)) {
         use.textContent = "⛽ Заправити машину";
         use.addEventListener("click", (event) => {
             event.stopPropagation();
