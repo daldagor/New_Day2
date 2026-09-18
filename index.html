@@ -1109,10 +1109,51 @@
     #strandedCarGrid, #strandedBackpackGrid { grid-template-columns:repeat(3,minmax(0,1fr)); }
 }
 
+
+/* Wood chopping is available only after nearby mapped trees are confirmed. */
+#chopWoodBtn { display:none; }
+
+
+/* Natural-water actions */
+#collectWaterBtn, #fishBtn {
+    min-height:34px;
+    border-radius:9px;
+    font-weight:800;
+}
+
+
+/* Special OSM building icons */
+.special-building-marker-wrap {
+    background:transparent !important;
+    border:0 !important;
+}
+.special-building-marker {
+    width:28px;
+    height:28px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:50%;
+    background:rgba(18,18,18,.88);
+    border:2px solid rgba(255,255,255,.9);
+    box-shadow:0 2px 7px rgba(0,0,0,.55);
+    font-size:17px;
+    line-height:1;
+    user-select:none;
+}
+.special-building-marker.depleted {
+    opacity:.48;
+    filter:grayscale(1);
+}
+
 </style>
 </head>
 
 <body>
+
+<button id="collectWaterBtn" type="button" onclick="collectNaturalWater()" style="display:none;">💧 Набрати воду</button>
+<button id="fishBtn" type="button" onclick="fishAtNaturalWater()" style="display:none;">🎣 Ловити рибу</button>
+
 
     <!-- MAP -->
 
@@ -2647,8 +2688,8 @@ function hasScoutAxe() {
 }
 
 function chopWood() {
-    if (currentBiome !== "field") {
-        showGameMessage("Тут немає дерев! Перейдіть у лісову зону (режим Поле)", "error");
+    if (!canChopWoodHere()) {
+        showGameMessage("🌲 Тут немає позначених дерев. Підійди ближче до дерева, алеї або лісу.", "error");
         return;
     }
 
@@ -3417,6 +3458,8 @@ function renderCachedBuildings() {
     if (!buildingLayer) return;
     const cached = Array.from(buildingMemoryCache.values());
     cached.forEach(item => ensureBuildingRendered(item.id, item.ring));
+
+    scheduleSpecialBuildingMarkerRefresh();
 }
 
 async function loadVisibleBuildings() {
@@ -3678,6 +3721,8 @@ function attachPoisToCachedBuildings(elements) {
 
     if (changed) saveBuildingGeometryCache();
     return changed;
+
+    scheduleSpecialBuildingMarkerRefresh();
 }
 
 
@@ -3874,6 +3919,8 @@ function searchBuilding(record) {
 
     ensureBuildingSlots(record);
     openBuildingLootModal(record);
+
+    scheduleSpecialBuildingMarkerRefresh();
 }
 
 
@@ -4005,6 +4052,8 @@ function takeBuildingSlot(record, slotIndex) {
     renderBuildingLootModal();
     updateInventoryUI();
     if (record.polygon) record.polygon.setPopupContent(buildBuildingPopup(record));
+
+    scheduleSpecialBuildingMarkerRefresh();
 }
 
 function renderBuildingLootModalV2() {
@@ -4037,6 +4086,8 @@ function renderBuildingLootModalV2() {
         buildingSlotItemCount(state) ? "Натисни на предмет, щоб перемістити його до себе." : "📭 Тут порожньо."
     );
     renderBuildingBackpackGridV2(activeLootBuilding);
+
+    scheduleSpecialBuildingMarkerRefresh();
 }
 
 function renderBuildingBackpackGridV2(record) {
@@ -4186,6 +4237,8 @@ function captureBuilding(record) {
     record.polygon.setStyle(getBuildingStyle(buildingStates[record.id]));
     record.polygon.setPopupContent(buildBuildingPopup(record));
     scheduleBuildingLoad();
+
+    scheduleSpecialBuildingMarkerRefresh();
 }
 
 function openBaseStorage(record) {
@@ -4513,7 +4566,7 @@ function updateHUD() {
 
     const chopWoodButton = document.getElementById("chopWoodButton");
     if (chopWoodButton) {
-        chopWoodButton.classList.toggle("unavailable", currentBiome !== "field");
+        chopWoodButton.classList.toggle("unavailable", !canChopWoodHere());
         chopWoodButton.title = currentBiome === "field"
             ? "Зібрати одну в'язанку дров"
             : "Доступно тільки в режимі Поле";
@@ -5734,6 +5787,457 @@ setInterval(() => updateHealthAndRest(survivalCurrentSpeedKmh), 30000);
 setTimeout(() => {
     if (strandedCar && typeof map !== "undefined" && map) createStrandedCarMarker();
 }, 500);
+
+
+/* =========================================================
+   REAL TREE / WOOD DETECTION FOR FIREWOOD
+   Firewood can be chopped anywhere there are mapped trees:
+   natural=tree, natural=tree_row, natural=wood, landuse=forest.
+========================================================= */
+const TREE_INTERACTION_RADIUS = 30;
+const TREE_RECHECK_DISTANCE = 35;
+const TREE_CACHE_RADIUS = 450;
+
+let nearbyTreeFeatures = [];
+let lastTreeCheckPoint = null;
+let treeCheckBusy = false;
+let canChopNearTrees = false;
+
+function pointToSegmentDistanceMeters(p, a, b) {
+    const lat0 = p.lat * Math.PI / 180;
+    const kx = 111320 * Math.cos(lat0);
+    const ky = 110540;
+    const px = p.lng * kx, py = p.lat * ky;
+    const ax = a.lng * kx, ay = a.lat * ky;
+    const bx = b.lng * kx, by = b.lat * ky;
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx*dx + dy*dy;
+    let t = len2 ? ((px-ax)*dx + (py-ay)*dy)/len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px-(ax+t*dx), py-(ay+t*dy));
+}
+
+function pointInLatLngRing(point, ring) {
+    let inside = false;
+    for (let i=0, j=ring.length-1; i<ring.length; j=i++) {
+        const xi=ring[i].lng, yi=ring[i].lat;
+        const xj=ring[j].lng, yj=ring[j].lat;
+        const intersect = ((yi > point.lat) !== (yj > point.lat)) &&
+            (point.lng < (xj-xi)*(point.lat-yi)/((yj-yi)||1e-12)+xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
+function distanceToTreeFeature(point, feature) {
+    if (feature.kind === "point") {
+        return getDistance(point.lat, point.lng, feature.lat, feature.lng);
+    }
+    const ring = feature.ring || [];
+    if (!ring.length) return Infinity;
+    if (feature.closed && pointInLatLngRing(point, ring)) return 0;
+    let best = Infinity;
+    for (let i=1; i<ring.length; i++) {
+        best = Math.min(best, pointToSegmentDistanceMeters(point, ring[i-1], ring[i]));
+    }
+    if (feature.closed && ring.length > 2) {
+        best = Math.min(best, pointToSegmentDistanceMeters(point, ring[ring.length-1], ring[0]));
+    }
+    return best;
+}
+
+function updateChopWoodAvailability() {
+    const btn = document.getElementById("chopWoodBtn");
+    if (!btn) return;
+    const hasAxe = inventory.some(item =>
+        String(item.id || "").toLowerCase().includes("axe") ||
+        String(item.name || "").toLowerCase().includes("сокир")
+    );
+    const allowed = canChopNearTrees && hasAxe;
+    btn.style.display = allowed ? "" : "none";
+    btn.disabled = !allowed;
+}
+
+async function refreshNearbyTrees(lat, lng, force=false) {
+    const p = {lat:Number(lat), lng:Number(lng)};
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) return;
+
+    if (!force && lastTreeCheckPoint &&
+        getDistance(lastTreeCheckPoint.lat,lastTreeCheckPoint.lng,p.lat,p.lng) < TREE_RECHECK_DISTANCE) {
+        canChopNearTrees = nearbyTreeFeatures.some(f => distanceToTreeFeature(p,f) <= TREE_INTERACTION_RADIUS);
+        updateChopWoodAvailability();
+        return;
+    }
+    if (treeCheckBusy) return;
+    treeCheckBusy = true;
+
+    const query = `[out:json][timeout:12];
+(
+  node["natural"="tree"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  way["natural"="tree_row"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  way["natural"="wood"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  relation["natural"="wood"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  way["landuse"="forest"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+  relation["landuse"="forest"](around:${TREE_CACHE_RADIUS},${p.lat},${p.lng});
+);
+out geom;`;
+
+    const servers = [
+        "https://overpass-api.de/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter",
+        "https://overpass.nchc.org.tw/api/interpreter"
+    ];
+
+    try {
+        let data = null;
+        for (const server of servers) {
+            try {
+                const response = await fetch(server, {
+                    method:"POST",
+                    headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
+                    body:"data="+encodeURIComponent(query)
+                });
+                if (!response.ok) continue;
+                data = await response.json();
+                if (data) break;
+            } catch (_) {}
+        }
+        if (!data) throw new Error("Overpass unavailable");
+
+        const features = [];
+        for (const el of (data.elements || [])) {
+            if (el.type === "node" && el.tags?.natural === "tree") {
+                features.push({kind:"point",lat:Number(el.lat),lng:Number(el.lon)});
+            } else if (Array.isArray(el.geometry) && el.geometry.length >= 2) {
+                const ring = el.geometry.map(g => ({lat:Number(g.lat),lng:Number(g.lon)}));
+                const closed = el.tags?.natural === "wood" || el.tags?.landuse === "forest";
+                features.push({kind:"line",ring,closed});
+            }
+        }
+        nearbyTreeFeatures = features;
+        lastTreeCheckPoint = p;
+        canChopNearTrees = features.some(f => distanceToTreeFeature(p,f) <= TREE_INTERACTION_RADIUS);
+    } catch (_) {
+        // Do not falsely allow chopping when tree data cannot be confirmed.
+        canChopNearTrees = false;
+    } finally {
+        treeCheckBusy = false;
+        updateChopWoodAvailability();
+    }
+}
+
+function canChopWoodHere() {
+    return canChopNearTrees;
+}
+
+
+
+/* =========================================================
+   REAL WATER — collect drinking water + fishing
+   OSM: natural=water, waterway=river/stream/canal, natural=spring
+========================================================= */
+const WATER_INTERACTION_RADIUS = 25;
+const WATER_RECHECK_DISTANCE = 35;
+const WATER_CACHE_RADIUS = 500;
+const FISH_COOLDOWN_MS = 5 * 60 * 1000;
+const FISH_CATCH_CHANCE = 0.45;
+
+let nearbyWaterFeatures = [];
+let lastWaterCheckPoint = null;
+let waterCheckBusy = false;
+let canUseNearbyWater = false;
+let lastFishingAt = Number(localStorage.getItem("geoGameLastFishingV1") || 0);
+
+function distanceToWaterFeature(point, feature) {
+    if (feature.kind === "point") {
+        return getDistance(point.lat, point.lng, feature.lat, feature.lng);
+    }
+    const ring = feature.ring || [];
+    if (!ring.length) return Infinity;
+    if (feature.closed && pointInLatLngRing(point, ring)) return 0;
+    let best = Infinity;
+    for (let i=1; i<ring.length; i++) {
+        best = Math.min(best, pointToSegmentDistanceMeters(point, ring[i-1], ring[i]));
+    }
+    if (feature.closed && ring.length > 2) {
+        best = Math.min(best, pointToSegmentDistanceMeters(point, ring[ring.length-1], ring[0]));
+    }
+    return best;
+}
+
+function updateWaterActionsAvailability() {
+    const collectBtn = document.getElementById("collectWaterBtn");
+    const fishBtn = document.getElementById("fishBtn");
+    if (collectBtn) {
+        collectBtn.style.display = canUseNearbyWater ? "" : "none";
+        collectBtn.disabled = !canUseNearbyWater;
+    }
+    if (fishBtn) {
+        fishBtn.style.display = canUseNearbyWater ? "" : "none";
+        fishBtn.disabled = !canUseNearbyWater;
+    }
+}
+
+async function refreshNearbyWater(lat, lng, force=false) {
+    const p = {lat:Number(lat), lng:Number(lng)};
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) return;
+
+    if (!force && lastWaterCheckPoint &&
+        getDistance(lastWaterCheckPoint.lat,lastWaterCheckPoint.lng,p.lat,p.lng) < WATER_RECHECK_DISTANCE) {
+        canUseNearbyWater = nearbyWaterFeatures.some(f =>
+            distanceToWaterFeature(p,f) <= WATER_INTERACTION_RADIUS
+        );
+        updateWaterActionsAvailability();
+        return;
+    }
+    if (waterCheckBusy) return;
+    waterCheckBusy = true;
+
+    const query = `[out:json][timeout:12];
+(
+  node["natural"="spring"](around:${WATER_CACHE_RADIUS},${p.lat},${p.lng});
+  way["natural"="water"](around:${WATER_CACHE_RADIUS},${p.lat},${p.lng});
+  relation["natural"="water"](around:${WATER_CACHE_RADIUS},${p.lat},${p.lng});
+  way["waterway"~"^(river|stream|canal)$"](around:${WATER_CACHE_RADIUS},${p.lat},${p.lng});
+  relation["waterway"="riverbank"](around:${WATER_CACHE_RADIUS},${p.lat},${p.lng});
+);
+out geom;`;
+
+    const servers = [
+        "https://overpass-api.de/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter",
+        "https://overpass.nchc.org.tw/api/interpreter"
+    ];
+
+    try {
+        let data = null;
+        for (const server of servers) {
+            try {
+                const response = await fetch(server, {
+                    method:"POST",
+                    headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
+                    body:"data="+encodeURIComponent(query)
+                });
+                if (!response.ok) continue;
+                data = await response.json();
+                if (data) break;
+            } catch (_) {}
+        }
+        if (!data) throw new Error("Overpass unavailable");
+
+        const features = [];
+        for (const el of (data.elements || [])) {
+            if (el.type === "node" && el.tags?.natural === "spring") {
+                features.push({kind:"point",lat:Number(el.lat),lng:Number(el.lon)});
+            } else if (Array.isArray(el.geometry) && el.geometry.length >= 2) {
+                const ring = el.geometry.map(g => ({lat:Number(g.lat),lng:Number(g.lon)}));
+                const closed = el.tags?.natural === "water" || el.tags?.waterway === "riverbank";
+                features.push({kind:"line",ring,closed});
+            }
+        }
+        nearbyWaterFeatures = features;
+        lastWaterCheckPoint = p;
+        canUseNearbyWater = features.some(f =>
+            distanceToWaterFeature(p,f) <= WATER_INTERACTION_RADIUS
+        );
+    } catch (_) {
+        canUseNearbyWater = false;
+    } finally {
+        waterCheckBusy = false;
+        updateWaterActionsAvailability();
+    }
+}
+
+function canUseWaterHere() {
+    return canUseNearbyWater;
+}
+
+function collectNaturalWater() {
+    if (!canUseWaterHere()) {
+        showGameMessage("💧 Підійди ближче до водойми.", "error");
+        return;
+    }
+    const item = {
+        id:"water",
+        name:"Вода",
+        icon:"💧",
+        weight:1.0,
+        volume:1.0,
+        external:false
+    };
+    if (!canAddItem(item.weight, item.volume)) {
+        showGameMessage("У твоєму інвентарі немає місця для води.", "error");
+        return;
+    }
+    addItem(item);
+    updateInventoryUI();
+    showGameMessage("💧 Набрано 1 л води.", "success");
+}
+
+function fishAtNaturalWater() {
+    if (!canUseWaterHere()) {
+        showGameMessage("🎣 Підійди ближче до водойми.", "error");
+        return;
+    }
+
+    const now = Date.now();
+    const remaining = FISH_COOLDOWN_MS - (now - lastFishingAt);
+    if (remaining > 0) {
+        showGameMessage(`🎣 Спробуй ще раз через ${Math.ceil(remaining/60000)} хв.`, "error");
+        return;
+    }
+
+    lastFishingAt = now;
+    localStorage.setItem("geoGameLastFishingV1", String(now));
+
+    if (Math.random() > FISH_CATCH_CHANCE) {
+        showGameMessage("🎣 Цього разу нічого не спіймалось.", "error");
+        return;
+    }
+
+    const fish = {
+        id:"raw_fish",
+        name:"Сира риба",
+        icon:"🐟",
+        weight:0.7,
+        volume:1.0,
+        external:false
+    };
+    if (!canAddItem(fish.weight, fish.volume)) {
+        showGameMessage("🐟 Риба є, але в інвентарі немає місця.", "error");
+        return;
+    }
+    addItem(fish);
+    updateInventoryUI();
+    showGameMessage("🐟 Ти спіймав рибу!", "success");
+}
+
+
+
+/* =========================================================
+   VISIBLE SPECIAL-BUILDING MAP ICONS
+   Uses the already classified OSM building cache.
+========================================================= */
+let specialBuildingIconLayer = null;
+const SPECIAL_BUILDING_ICONS = {
+    medical: "✚",
+    shop: "🛒",
+    service: "🔧",
+    fuel: "⛽",
+    food: "🍴",
+    mall: "🏬",
+    base: "🏠"
+};
+
+function buildingCenter(ring) {
+    if (!Array.isArray(ring) || !ring.length) return null;
+    let lat = 0, lng = 0, n = 0;
+    for (const p of ring) {
+        const a = Number(p.lat ?? p[0]);
+        const b = Number(p.lng ?? p.lon ?? p[1]);
+        if (Number.isFinite(a) && Number.isFinite(b)) {
+            lat += a; lng += b; n++;
+        }
+    }
+    return n ? {lat:lat/n, lng:lng/n} : null;
+}
+
+function getSpecialBuildingType(record) {
+    if (!record) return null;
+    const state = record.state || {};
+    if (state.isBase || record.isBase || record.type === "base") return "base";
+    const t = String(record.type || record.buildingType || record.poi?.type || "").toLowerCase();
+    if (SPECIAL_BUILDING_ICONS[t]) return t;
+
+    const tags = Object.assign({}, record.tags || {}, record.poi?.tags || {});
+    const amenity = String(tags.amenity || "").toLowerCase();
+    const healthcare = String(tags.healthcare || "").toLowerCase();
+    const shop = String(tags.shop || "").toLowerCase();
+    const building = String(tags.building || "").toLowerCase();
+    const name = String(tags.name || "").toLowerCase();
+
+    if (["pharmacy","hospital","clinic","doctors"].includes(amenity) ||
+        ["pharmacy","hospital","clinic","doctor","doctors"].includes(healthcare)) return "medical";
+    if (amenity === "fuel" || shop === "fuel") return "fuel";
+    if (["car_repair","tyres","car_parts","motorcycle_repair"].includes(shop) ||
+        amenity === "vehicle_inspection") return "service";
+    if (["restaurant","cafe","fast_food","food_court","bar","pub"].includes(amenity)) return "food";
+    if (["mall","department_store"].includes(shop) || building === "retail" ||
+        name.includes("ашан") || name.includes("auchan") ||
+        name.includes("епіцентр") || name.includes("epicentr")) return "mall";
+    if (["supermarket","convenience","grocery","general","greengrocer","bakery","butcher","deli","beverages","alcohol"].includes(shop)) return "shop";
+    return null;
+}
+
+function isBuildingDepleted(record) {
+    const s = record?.state || record || {};
+    if (s.isBase || record?.isBase) return false;
+    if (s.depleted === true || s.looted === true || s.searched === true && s.empty === true) return true;
+    if (Array.isArray(s.slots) && s.generatedLoot === true) return s.slots.every(x => !x);
+    return false;
+}
+
+function makeSpecialBuildingDivIcon(symbol, depleted=false) {
+    const shown = depleted ? "📭" : symbol;
+    return L.divIcon({
+        className: "special-building-marker-wrap",
+        html: `<div class="special-building-marker ${depleted ? "depleted" : ""}">${shown}</div>`,
+        iconSize: [30,30],
+        iconAnchor: [15,15]
+    });
+}
+
+function refreshSpecialBuildingMarkers() {
+    if (typeof map === "undefined" || !map) return;
+    if (!specialBuildingIconLayer) specialBuildingIconLayer = L.layerGroup().addTo(map);
+    specialBuildingIconLayer.clearLayers();
+
+    const cache =
+        (typeof buildingCache !== "undefined" && Array.isArray(buildingCache) && buildingCache) ||
+        (typeof cachedBuildings !== "undefined" && Array.isArray(cachedBuildings) && cachedBuildings) ||
+        [];
+
+    for (const record of cache) {
+        const type = getSpecialBuildingType(record);
+        if (!type) continue; // ordinary houses remain polygons only
+        const ring = record.ring || record.geometry || record.points;
+        const center = buildingCenter(ring);
+        if (!center) continue;
+
+        const marker = L.marker([center.lat, center.lng], {
+            icon: makeSpecialBuildingDivIcon(SPECIAL_BUILDING_ICONS[type], isBuildingDepleted(record)),
+            interactive: false,
+            keyboard: false,
+            zIndexOffset: 550
+        });
+        specialBuildingIconLayer.addLayer(marker);
+    }
+
+    // Base can be stored separately from the building cache.
+    try {
+        if (typeof baseGeometry !== "undefined" && baseGeometry) {
+            const ring = baseGeometry.ring || baseGeometry.geometry || baseGeometry.points || baseGeometry;
+            const center = buildingCenter(ring);
+            if (center) {
+                specialBuildingIconLayer.addLayer(L.marker([center.lat,center.lng], {
+                    icon: makeSpecialBuildingDivIcon("🏠", false),
+                    interactive:false, keyboard:false, zIndexOffset:650
+                }));
+            }
+        }
+    } catch (_) {}
+}
+
+function scheduleSpecialBuildingMarkerRefresh() {
+    setTimeout(refreshSpecialBuildingMarkers, 0);
+}
+
+
+
+setTimeout(() => {
+    try { refreshSpecialBuildingMarkers(); } catch (_) {}
+}, 1800);
+
 </script>
 
 
