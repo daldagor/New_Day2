@@ -313,6 +313,35 @@
         }
 
         /* =========================
+           COMPASS / CENTER BUTTON
+        ========================== */
+
+        #centerButton {
+            position: fixed;
+            right: 18px;
+            bottom: calc(24px + env(safe-area-inset-bottom));
+            z-index: 1500;
+            width: 58px;
+            height: 58px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.22);
+            background: rgba(10,16,23,0.94);
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 6px 22px rgba(0,0,0,0.50);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        #centerButton:active {
+            transform: scale(0.90);
+        }
+
+        /* =========================
            GPS STATUS
         ========================== */
 
@@ -600,6 +629,18 @@
     </div>
 
 
+    <!-- COMPASS: CENTER MAP ON CURRENT GPS POSITION -->
+
+    <button
+        id="centerButton"
+        class="hidden"
+        title="Повернутися до моєї позиції"
+        aria-label="Повернутися до моєї позиції"
+    >
+        🧭
+    </button>
+
+
     <!-- GPS STATUS -->
 
     <div
@@ -780,6 +821,11 @@ const visionInfo =
         "visionInfo"
     );
 
+const centerButton =
+    document.getElementById(
+        "centerButton"
+    );
+
 
 /* =========================================================
    FOG CANVAS
@@ -850,6 +896,10 @@ function startGame() {
     );
 
     gpsStatus.classList.remove(
+        "hidden"
+    );
+
+    centerButton.classList.remove(
         "hidden"
     );
 
@@ -1125,20 +1175,13 @@ function handlePosition(
             false;
 
     }
-    else {
 
-        map.panTo(
-            latLng,
-            {
-
-                animate: true,
-
-                duration: 0.5
-
-            }
-        );
-
-    }
+    /*
+        Після першого GPS-фіксу камера більше
+        не рухається автоматично. Карту можна
+        вільно гортати. Для повернення до себе
+        використовується кнопка компаса.
+    */
 
 
     /*
@@ -1190,6 +1233,35 @@ function handlePosition(
         " м";
 
 }
+
+
+/* =========================================================
+   COMPASS — CENTER MAP ON PLAYER
+========================================================= */
+
+centerButton.addEventListener(
+    "click",
+    function () {
+
+        if (!currentPosition || !map) {
+            gpsStatus.textContent =
+                "GPS-позиція ще не визначена";
+            return;
+        }
+
+        map.flyTo(
+            [
+                currentPosition.lat,
+                currentPosition.lng
+            ],
+            map.getZoom(),
+            {
+                animate: true,
+                duration: 0.6
+            }
+        );
+    }
+);
 
 
 /* =========================================================
@@ -1974,7 +2046,7 @@ function drawFog() {
     */
 
     fogContext.fillStyle =
-        "rgba(0, 0, 0, 0.78)";
+        "rgba(0, 0, 0, 0.90)";
 
 
     fogContext.fillRect(
@@ -2102,141 +2174,47 @@ function drawVisibilityHole(
             [lat, lng]
         );
 
-
     const radiusPixels =
         metersToPixels(
-
             lat,
-
             lng,
-
             radiusMeters
-
         );
 
-
     /*
-        Skip circles completely
-        outside screen.
-
-        Important once player
-        has thousands of zones.
+        Не малюємо кола, які повністю
+        знаходяться за межами екрана.
     */
 
     if (
         point.x + radiusPixels < 0 ||
         point.y + radiusPixels < 0 ||
-        point.x - radiusPixels >
-            window.innerWidth ||
-        point.y - radiusPixels >
-            window.innerHeight
+        point.x - radiusPixels > window.innerWidth ||
+        point.y - radiusPixels > window.innerHeight
     ) {
-
         return;
-
     }
 
-
     /*
-        Permanent explored zone:
-        perfectly clear.
-
-        Current zone:
-        slight soft edge.
-    */
-
-    if (!current) {
-
-        fogContext.beginPath();
-
-        fogContext.arc(
-
-            point.x,
-
-            point.y,
-
-            radiusPixels,
-
-            0,
-
-            Math.PI * 2
-
-        );
-
-        fogContext.fill();
-
-        return;
-
-    }
-
-
-    /*
-        Current visibility gets
-        a subtle feathered edge.
-    */
-
-    const gradient =
-        fogContext
-        .createRadialGradient(
-
-            point.x,
-            point.y,
-            radiusPixels * 0.85,
-
-            point.x,
-            point.y,
-            radiusPixels
-
-        );
-
-
-    gradient.addColorStop(
-        0,
-        "rgba(0,0,0,1)"
-    );
-
-    gradient.addColorStop(
-        0.82,
-        "rgba(0,0,0,1)"
-    );
-
-    gradient.addColorStop(
-        1,
-        "rgba(0,0,0,0)"
-    );
-
-
-    fogContext.fillStyle =
-        gradient;
-
-
-    fogContext.beginPath();
-
-    fogContext.arc(
-
-        point.x,
-
-        point.y,
-
-        radiusPixels,
-
-        0,
-
-        Math.PI * 2
-
-    );
-
-    fogContext.fill();
-
-
-    /*
-        Restore opaque cutter
-        for next permanent zone.
+        Простий прозорий отвір у тумані.
+        Без градієнта, кольорових зон
+        або напівпрозорого краю.
     */
 
     fogContext.fillStyle =
         "rgba(0,0,0,1)";
 
+    fogContext.beginPath();
+
+    fogContext.arc(
+        point.x,
+        point.y,
+        radiusPixels,
+        0,
+        Math.PI * 2
+    );
+
+    fogContext.fill();
 }
 
 
