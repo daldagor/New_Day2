@@ -916,6 +916,158 @@
     cursor:pointer;
 }
 
+
+
+/* ===== Thirst directly under health ===== */
+.thirst-under-health {
+    width:100%;
+    margin-top:5px;
+    pointer-events:none;
+    color:#fff;
+}
+.thirst-row {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:11px;
+    font-weight:800;
+    margin-bottom:3px;
+}
+.thirst-health-style-bar {
+    width:100%;
+    height:7px;
+    overflow:hidden;
+    border-radius:6px;
+    background:rgba(255,255,255,.16);
+}
+#thirstFill {
+    display:block;
+    height:100%;
+    width:100%;
+    background:#54b9ff;
+    transition:width .25s linear;
+}
+#thirstMode {
+    display:block;
+    margin-top:2px;
+    text-align:right;
+    font-size:8px;
+    opacity:.65;
+}
+
+
+.inventory-item-actions {
+    position:fixed;
+    left:50%;
+    bottom:24px;
+    transform:translateX(-50%);
+    z-index:10050;
+    width:min(320px, calc(100vw - 28px));
+    padding:12px;
+    border-radius:14px;
+    background:rgba(18,23,29,.97);
+    border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 10px 35px rgba(0,0,0,.45);
+    display:grid;
+    gap:8px;
+}
+.inventory-action-title {
+    font-size:13px;
+    font-weight:900;
+    color:#fff;
+    padding:2px 3px 5px;
+}
+.inventory-item-actions button {
+    min-height:42px;
+    border:0;
+    border-radius:10px;
+    font-weight:900;
+    cursor:pointer;
+}
+
+
+/* ===== THIRST BAR: directly under HP ===== */
+#thirstHud.thirst-under-health {
+    display:block !important;
+    width:100px !important;
+    margin:4px 0 8px 12px !important;
+    padding:0 !important;
+    color:#8fd3ff !important;
+    pointer-events:none !important;
+}
+#thirstHud .thirst-row {
+    display:flex !important;
+    width:100px !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    margin:0 0 3px 0 !important;
+    font-size:10px !important;
+    line-height:12px !important;
+    color:#8fd3ff !important;
+}
+#thirstHud #thirstMode {
+    display:none !important;
+}
+#thirstHud .thirst-bar {
+    display:block !important;
+    width:100px !important;
+    height:5px !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    border-radius:4px !important;
+    background:rgba(84,185,255,.20) !important;
+}
+#thirstHud #thirstFill {
+    display:block !important;
+    width:100%;
+    height:5px !important;
+    margin:0 !important;
+    background:#2196f3 !important;
+    border-radius:4px !important;
+    transition:width .25s linear;
+}
+
+
+/* ===== HUNGER BAR: directly under thirst ===== */
+#hungerHud.hunger-under-thirst {
+    display:block !important;
+    width:100px !important;
+    margin:4px 0 8px 12px !important;
+    padding:0 !important;
+    color:#ffb74d !important;
+    pointer-events:none !important;
+}
+#hungerHud .hunger-row {
+    display:flex !important;
+    width:100px !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    margin:0 0 3px 0 !important;
+    font-size:10px !important;
+    line-height:12px !important;
+    color:#ffb74d !important;
+}
+#hungerHud .hunger-bar {
+    display:block !important;
+    width:100px !important;
+    height:5px !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    border-radius:4px !important;
+    background:rgba(255,183,77,.20) !important;
+}
+#hungerHud #hungerFill {
+    display:block !important;
+    width:100%;
+    height:5px !important;
+    margin:0 !important;
+    background:#ff9800 !important;
+    border-radius:4px !important;
+    transition:width .25s linear;
+}
+
 </style>
 </head>
 
@@ -979,7 +1131,28 @@
         </div>
 
 
-        <div class="hud-controls">
+        
+<div id="thirstHud" class="thirst-under-health">
+    <div class="thirst-row">
+        <span>Спрага: <span id="thirstValue">100%</span></span>
+        <small id="thirstMode">спокій</small>
+    </div>
+    <div class="thirst-bar">
+        <div id="thirstFill"></div>
+    </div>
+</div>
+
+<div id="hungerHud" class="hunger-under-thirst">
+    <div class="hunger-row">
+        <span>Голод: <span id="hungerValue">100%</span></span>
+    </div>
+    <div class="hunger-bar">
+        <div id="hungerFill"></div>
+    </div>
+</div>
+
+
+<div class="hud-controls">
 
             <div
                 id="timeMode"
@@ -1439,6 +1612,86 @@ function formatLiters(value) {
 
 const BACKPACK_GRID_SLOTS = 24;
 
+
+function isWaterItem(item) {
+    return !!item && (
+        item.id === "water" ||
+        String(item.name || "").trim().toLowerCase() === "вода"
+    );
+}
+
+function drinkWaterFromInventoryIndex(index) {
+    const item = inventory[index];
+    if (!isWaterItem(item)) return;
+
+    updateSurvivalThirst(survivalCurrentSpeedKmh);
+
+    if (survivalState.thirst >= 99.9) {
+        showGameMessage("Ти не хочеш пити.", "error");
+        return;
+    }
+
+    inventory.splice(index, 1);
+    survivalState.thirst = Math.min(100, survivalState.thirst + 35);
+    survivalState.lastUpdate = Date.now();
+
+    saveInventory();
+    saveSurvivalState();
+    updateInventoryUI();
+    renderSurvivalHUD();
+    closeInventoryItemActions();
+
+    showGameMessage("💧 Ти випив воду.", "success");
+}
+
+function openInventoryItemActions(item, index) {
+    closeInventoryItemActions();
+
+    if (!isWaterItem(item) && !isFoodItem(item)) return false;
+
+    const menu = document.createElement("div");
+    menu.id = "inventoryItemActions";
+    menu.className = "inventory-item-actions";
+
+    const title = document.createElement("div");
+    title.className = "inventory-action-title";
+    title.textContent = `${item.icon || "💧"} ${item.name}`;
+
+    const use = document.createElement("button");
+    use.type = "button";
+
+    if (isWaterItem(item)) {
+        use.textContent = "💧 Випити";
+        use.addEventListener("click", (event) => {
+            event.stopPropagation();
+            drinkWaterFromInventoryIndex(index);
+        });
+    } else if (isFoodItem(item)) {
+        use.textContent = "🥫 З'їсти";
+        use.addEventListener("click", (event) => {
+            event.stopPropagation();
+            eatFoodFromInventoryIndex(index);
+        });
+    }
+
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.textContent = "Скасувати";
+    cancel.addEventListener("click", (event) => {
+        event.stopPropagation();
+        closeInventoryItemActions();
+    });
+
+    menu.append(title, use, cancel);
+    document.body.appendChild(menu);
+    return true;
+}
+
+function closeInventoryItemActions() {
+    const menu = document.getElementById("inventoryItemActions");
+    if (menu) menu.remove();
+}
+
 function renderBackpackGrid() {
     const container =
         document.getElementById("inventoryItems") ||
@@ -1489,6 +1742,16 @@ function renderBackpackGrid() {
             const lootModal = document.getElementById("buildingLootModal");
             if (lootModal && lootModal.classList.contains("show") && activeBuildingLootRecord) {
                 moveInventoryCellToOpenBuilding(index);
+            }
+        });
+        cell.addEventListener("click", (event) => {
+            if (typeof item !== "undefined" && (isWaterItem(item) || isFoodItem(item))) {
+                event.stopPropagation();
+                const idx = inventory.findIndex(inv =>
+                (isWaterItem(item) && isWaterItem(inv)) ||
+                (isFoodItem(item) && isFoodItem(inv))
+            );
+                if (idx >= 0) openInventoryItemActions(item, idx);
             }
         });
         container.appendChild(cell);
@@ -4764,6 +5027,187 @@ setInterval(
 
 checkLogin();
 
+
+
+/* =========================================================
+   SURVIVAL — thirst based on real elapsed time + GPS activity
+========================================================= */
+const SURVIVAL_STORAGE_KEY = "geoGameSurvivalV1";
+const THIRST_IDLE_HOURS = 72;
+const THIRST_WALK_HOURS = 36;
+const THIRST_FAST_HOURS = 54; // >15 km/h: bicycle/car assumption
+
+let survivalState = loadSurvivalState();
+let survivalCurrentSpeedKmh = 0;
+
+function loadSurvivalState() {
+    const now = Date.now();
+    try {
+        const saved = JSON.parse(localStorage.getItem(SURVIVAL_STORAGE_KEY) || "{}");
+        return {
+            thirst: Number.isFinite(Number(saved.thirst)) ? Math.max(0, Math.min(100, Number(saved.thirst))) : 100,
+            lastUpdate: Number(saved.lastUpdate) || now
+        };
+    } catch (_) {
+        return { thirst:100, lastUpdate:now, hunger:100, hungerLastUpdate:now };
+    }
+}
+
+function saveSurvivalState() {
+    localStorage.setItem(SURVIVAL_STORAGE_KEY, JSON.stringify(survivalState));
+}
+
+function getThirstMode(speedKmh = survivalCurrentSpeedKmh) {
+    if (speedKmh > 15) return { key:"fast", label:"транспорт / велосипед", hours:THIRST_FAST_HOURS };
+    if (speedKmh >= 1.5) return { key:"walk", label:"ходьба", hours:THIRST_WALK_HOURS };
+    return { key:"idle", label:"спокій", hours:THIRST_IDLE_HOURS };
+}
+
+function updateSurvivalThirst(speedKmh = survivalCurrentSpeedKmh) {
+    const now = Date.now();
+    const elapsedMs = Math.max(0, Math.min(now - survivalState.lastUpdate, 7 * 24 * 3600 * 1000));
+    const elapsedHours = elapsedMs / 3600000;
+
+    // Time while the app was closed is conservatively treated as rest.
+    // Live GPS movement changes the rate while the game is open.
+    const mode = getThirstMode(speedKmh);
+    const drainPerHour = 100 / mode.hours;
+    survivalState.thirst = Math.max(0, survivalState.thirst - elapsedHours * drainPerHour);
+    survivalState.lastUpdate = now;
+    saveSurvivalState();
+    renderSurvivalHUD();
+}
+
+function drinkWaterItem() {
+    const index = inventory.findIndex(item =>
+        item && (item.id === "water" || String(item.name || "").toLowerCase() === "вода")
+    );
+    if (index < 0) {
+        showGameMessage("У тебе немає води.", "error");
+        return;
+    }
+    inventory.splice(index, 1);
+    survivalState.thirst = Math.min(100, survivalState.thirst + 35);
+    survivalState.lastUpdate = Date.now();
+    saveInventory();
+    saveSurvivalState();
+    updateInventoryUI();
+    renderSurvivalHUD();
+    showGameMessage("💧 Ти випив воду.", "success");
+}
+
+function renderSurvivalHUD() {
+    const value = document.getElementById("thirstValue");
+    const fill = document.getElementById("thirstFill");
+    const modeEl = document.getElementById("thirstMode");
+    if (!value || !fill) return;
+    const pct = Math.max(0, Math.min(100, survivalState.thirst));
+    value.textContent = `${Math.round(pct)}%`;
+    fill.style.width = `${pct}%`;
+    if (modeEl) modeEl.textContent = getThirstMode().label;
+}
+
+setInterval(() => updateSurvivalThirst(survivalCurrentSpeedKmh), 30000);
+window.addEventListener("beforeunload", () => updateSurvivalThirst(survivalCurrentSpeedKmh));
+
+
+
+updateSurvivalThirst(0);
+renderSurvivalHUD();
+
+
+/* =========================================================
+   SURVIVAL — hunger based on elapsed time + GPS activity
+========================================================= */
+const HUNGER_FULL_HOURS_IDLE = 120; // 5 days at rest from 100% to 0%
+const HUNGER_FULL_HOURS_WALK = 72;  // walking consumes energy faster
+const HUNGER_FULL_HOURS_FAST = 96;  // >15 km/h: bike/car mixed assumption
+
+if (!Number.isFinite(Number(survivalState.hunger))) {
+    survivalState.hunger = 100;
+}
+if (!Number(survivalState.hungerLastUpdate)) {
+    survivalState.hungerLastUpdate = Date.now();
+}
+
+function getHungerMode(speedKmh = survivalCurrentSpeedKmh) {
+    if (speedKmh > 15) {
+        return { key:"fast", hours:HUNGER_FULL_HOURS_FAST };
+    }
+    if (speedKmh >= 1.5) {
+        return { key:"walk", hours:HUNGER_FULL_HOURS_WALK };
+    }
+    return { key:"idle", hours:HUNGER_FULL_HOURS_IDLE };
+}
+
+function updateSurvivalHunger(speedKmh = survivalCurrentSpeedKmh) {
+    const now = Date.now();
+    const last = Number(survivalState.hungerLastUpdate) || now;
+    const elapsedMs = Math.max(0, Math.min(now - last, 7 * 24 * 3600 * 1000));
+    const elapsedHours = elapsedMs / 3600000;
+
+    const mode = getHungerMode(speedKmh);
+    const drainPerHour = 100 / mode.hours;
+
+    survivalState.hunger = Math.max(
+        0,
+        Math.min(100, Number(survivalState.hunger ?? 100) - elapsedHours * drainPerHour)
+    );
+    survivalState.hungerLastUpdate = now;
+
+    saveSurvivalState();
+    renderHungerHUD();
+}
+
+function renderHungerHUD() {
+    const value = document.getElementById("hungerValue");
+    const fill = document.getElementById("hungerFill");
+    if (!value || !fill) return;
+
+    const pct = Math.max(0, Math.min(100, Number(survivalState.hunger ?? 100)));
+    value.textContent = `${Math.round(pct)}%`;
+    fill.style.width = `${pct}%`;
+}
+
+function isFoodItem(item) {
+    if (!item) return false;
+    const id = String(item.id || "").toLowerCase();
+    const name = String(item.name || "").trim().toLowerCase();
+    return id === "food" || name === "їжа";
+}
+
+function eatFoodFromInventoryIndex(index) {
+    const item = inventory[index];
+    if (!isFoodItem(item)) return;
+
+    updateSurvivalHunger(survivalCurrentSpeedKmh);
+
+    if (survivalState.hunger >= 99.9) {
+        showGameMessage("Ти не голодний.", "error");
+        return;
+    }
+
+    inventory.splice(index, 1);
+    survivalState.hunger = Math.min(100, survivalState.hunger + 30);
+    survivalState.hungerLastUpdate = Date.now();
+
+    saveInventory();
+    saveSurvivalState();
+    updateInventoryUI();
+    renderHungerHUD();
+    closeInventoryItemActions();
+
+    showGameMessage("🥫 Ти поїв.", "success");
+}
+
+setInterval(() => updateSurvivalHunger(survivalCurrentSpeedKmh), 30000);
+window.addEventListener("beforeunload", () =>
+    updateSurvivalHunger(survivalCurrentSpeedKmh)
+);
+
+
+updateSurvivalHunger(0);
+renderHungerHUD();
 </script>
 
 
