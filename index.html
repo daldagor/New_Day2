@@ -4368,21 +4368,17 @@ function isNight() {
 ========================================================= */
 
 function getCurrentVisionRadius() {
-
     /*
-        BIOME-BASED VISIBILITY:
+       City:
+       day = 50 m
+       night without flashlight = 25 m
+       night with flashlight = 50 m
 
-        City  = 100 meters
-        Field = 500 meters
-
-        The radius depends strictly on the
-        automatically detected biome.
+       Field remains 500 m.
     */
-
-    return currentBiome === "field"
-        ? 500
-        : 100;
-
+    if (currentBiome === "field") return 500;
+    if (isNight() && !flashlightEnabled) return 25;
+    return 50;
 }
 
 
