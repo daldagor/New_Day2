@@ -745,6 +745,72 @@
     background: rgba(32,125,66,.95);
 }
 
+
+/* ===== Backpack grid UI ===== */
+#inventoryModal .inventory-items,
+#inventoryModal #inventoryItems,
+#backpackModal .inventory-items,
+#backpackModal #inventoryItems,
+.inventory-modal .inventory-items,
+.inventory-modal #inventoryItems {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+.backpack-grid-cell {
+    aspect-ratio: 1 / 1;
+    min-width: 0;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.16);
+    background: rgba(255,255,255,.075);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 8px;
+    position: relative;
+    color: #fff !important;
+}
+.backpack-grid-cell.empty {
+    opacity: .38;
+}
+.backpack-grid-cell .backpack-icon {
+    font-size: 29px;
+    line-height: 1;
+    margin-bottom: 6px;
+}
+.backpack-grid-cell .backpack-name {
+    font-size: 11px;
+    line-height: 1.15;
+    word-break: break-word;
+}
+.backpack-grid-cell .backpack-count {
+    position: absolute;
+    right: 7px;
+    bottom: 5px;
+    font-size: 12px;
+    font-weight: 800;
+}
+.backpack-grid-cell .backpack-external {
+    position: absolute;
+    left: 6px;
+    top: 5px;
+    font-size: 9px;
+    opacity: .7;
+}
+@media (max-width: 460px) {
+    #inventoryModal .inventory-items,
+    #inventoryModal #inventoryItems,
+    #backpackModal .inventory-items,
+    #backpackModal #inventoryItems,
+    .inventory-modal .inventory-items,
+    .inventory-modal #inventoryItems {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+}
+
 </style>
 </head>
 
@@ -1058,6 +1124,60 @@ function formatLiters(value) {
     return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
+
+const BACKPACK_GRID_SLOTS = 24;
+
+function renderBackpackGrid() {
+    const container =
+        document.getElementById("inventoryItems") ||
+        document.querySelector("#inventoryModal .inventory-items") ||
+        document.querySelector("#backpackModal .inventory-items") ||
+        document.querySelector(".inventory-modal .inventory-items");
+
+    if (!container || !Array.isArray(inventory)) return;
+
+    container.innerHTML = "";
+
+    /* Group identical objects into one visual cell with ×quantity. */
+    const grouped = [];
+    const byKey = new Map();
+
+    inventory.forEach((item) => {
+        const key = item.id || item.name;
+        if (!byKey.has(key)) {
+            const entry = { ...item, quantity: 0 };
+            byKey.set(key, entry);
+            grouped.push(entry);
+        }
+        byKey.get(key).quantity += 1;
+    });
+
+    const slots = Math.max(BACKPACK_GRID_SLOTS, grouped.length);
+
+    for (let i = 0; i < slots; i++) {
+        const item = grouped[i];
+        const cell = document.createElement("div");
+        cell.className = "backpack-grid-cell" + (item ? "" : " empty");
+
+        if (item) {
+            cell.innerHTML = `
+                ${item.external ? '<div class="backpack-external">ЗОВНІ</div>' : ""}
+                <div class="backpack-icon">${item.icon || "📦"}</div>
+                <div class="backpack-name">${item.name}</div>
+                <div class="backpack-count">×${item.quantity}</div>
+            `;
+            cell.title =
+                `${item.name} — ${Number(item.weight || 0).toFixed(1)} кг / ` +
+                `${Number(item.volume || 0).toFixed(1)} л`;
+        } else {
+            cell.innerHTML = '<div style="opacity:.30;font-size:24px;">＋</div>';
+        }
+
+        container.appendChild(cell);
+    }
+}
+
+
 function updateInventoryUI() {
     const weight = getInventoryWeight();
     const volume = getInventoryVolume();
@@ -1079,6 +1199,8 @@ function updateInventoryUI() {
         stats.textContent = `${Number(item.weight).toFixed(1)} кг / ${formatLiters(item.external ? 0 : Number(item.volume || 0))} л${item.external ? " · зовнішнє кріплення" : ""}`;
         info.append(name, stats); row.append(icon, info); list.appendChild(row);
     });
+
+    renderBackpackGrid();
 }
 
 document.getElementById("inventoryButton").addEventListener("click", () => {
