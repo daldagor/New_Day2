@@ -632,7 +632,20 @@
             #storageGrid { grid-template-columns:repeat(4,minmax(0,1fr)); }
         }
 
-    </style>
+    
+/* Base Storage: force readable white typography on the dark modal */
+#baseStorageModal,
+#baseStorageModal *,
+#storageModal,
+#storageModal *,
+.storage-modal,
+.storage-modal *,
+.base-storage-modal,
+.base-storage-modal * {
+    color: #ffffff !important;
+}
+
+</style>
 </head>
 
 <body>
