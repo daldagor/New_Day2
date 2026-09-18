@@ -544,6 +544,17 @@
         .inventory-item-stats { margin-top:3px; color:#b9c6d3; font-size:12px; }
         #closeInventory { margin-top:18px; width:100%; padding:12px; border:0; border-radius:11px; font-weight:800; cursor:pointer; }
 
+        #chopWoodButton.unavailable { opacity: .48; filter: grayscale(.35); }
+        #gameMessage {
+            position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%);
+            z-index: 5000; width: min(420px, calc(100% - 32px)); padding: 13px 16px;
+            border-radius: 12px; color: white; text-align: center; font-size: 13px; font-weight: 800;
+            background: rgba(24,34,44,.96); border: 1px solid rgba(255,255,255,.16);
+            box-shadow: 0 8px 28px rgba(0,0,0,.45); pointer-events: none;
+        }
+        #gameMessage.error { background: rgba(135,25,25,.97); border-color: rgba(255,120,120,.55); }
+        #gameMessage.success { background: rgba(22,105,58,.97); border-color: rgba(100,230,145,.5); }
+
         .hidden {
             display: none !important;
         }
@@ -661,6 +672,10 @@
                 🎒 Рюкзак
             </button>
 
+            <button id="chopWoodButton" class="hud-button unavailable">
+                🪓 Рубати дрова
+            </button>
+
         </div>
 
     </div>
@@ -703,6 +718,9 @@
             <button id="closeInventory">Закрити</button>
         </div>
     </div>
+
+    <!-- GAME MESSAGE -->
+    <div id="gameMessage" class="hidden"></div>
 
     <!-- LOGIN -->
 
@@ -757,6 +775,11 @@ const INVENTORY_STORAGE_KEY = "geoGameInventory";
 const STARTER_AXE = {
     id: "scout_axe", name: "Сокира розвідника", icon: "🪓",
     weight: 2.0, volume: 0, external: true
+};
+
+const FIREWOOD_BUNDLE = {
+    id: "firewood_bundle", name: "В'язанка дров", icon: "🪵",
+    weight: 10.0, volume: 15.0, external: false
 };
 
 let inventory = [];
@@ -837,6 +860,41 @@ document.getElementById("closeInventory").addEventListener("click", () => {
 document.getElementById("inventoryModal").addEventListener("click", e => {
     if (e.target.id === "inventoryModal") e.currentTarget.classList.add("hidden");
 });
+
+let gameMessageTimer = null;
+function showGameMessage(message, type = "") {
+    const box = document.getElementById("gameMessage");
+    box.textContent = message;
+    box.className = type || "";
+    clearTimeout(gameMessageTimer);
+    gameMessageTimer = setTimeout(() => box.classList.add("hidden"), 3000);
+}
+
+function hasScoutAxe() {
+    return inventory.some(item => item.id === STARTER_AXE.id);
+}
+
+function chopWood() {
+    if (currentBiome !== "field") {
+        showGameMessage("Тут немає дерев! Перейдіть у лісову зону (режим Поле)", "error");
+        return;
+    }
+
+    if (!hasScoutAxe()) {
+        showGameMessage("Для рубання дров потрібна Сокира розвідника!", "error");
+        return;
+    }
+
+    if (!canAddItem(FIREWOOD_BUNDLE.weight, FIREWOOD_BUNDLE.volume)) {
+        showGameMessage("Немає місця в рюкзаку! Спробуйте вивантажити ресурси", "error");
+        return;
+    }
+
+    addItem({...FIREWOOD_BUNDLE, uid: Date.now()});
+    showGameMessage("+1 В'язанка дров (10.0 кг / 15 л)", "success");
+}
+
+document.getElementById("chopWoodButton").addEventListener("click", chopWood);
 
 loadInventory();
 updateInventoryUI();
@@ -1739,6 +1797,14 @@ function updateHUD() {
             .textContent =
                 "🔦 Увімкнути";
 
+    }
+
+    const chopWoodButton = document.getElementById("chopWoodButton");
+    if (chopWoodButton) {
+        chopWoodButton.classList.toggle("unavailable", currentBiome !== "field");
+        chopWoodButton.title = currentBiome === "field"
+            ? "Зібрати одну в'язанку дров"
+            : "Доступно тільки в режимі Поле";
     }
 
 }
