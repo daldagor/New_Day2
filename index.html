@@ -1155,6 +1155,25 @@
     display: flex !important;
 }
 
+
+#gpsRetryBtn {
+    position: fixed;
+    left: 50%;
+    bottom: 86px;
+    transform: translateX(-50%);
+    z-index: 5000;
+    display: none;
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 14px;
+    padding: 11px 16px;
+    background: rgba(18,22,27,.94);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+    box-shadow: 0 4px 18px rgba(0,0,0,.45);
+}
+#gpsRetryBtn.show { display: block; }
+
 </style>
 </head>
 
@@ -3121,42 +3140,73 @@ const playerIcon =
    GPS
 ========================================================= */
 
-function startGPS() {
+function startGPS(forceRestart = false) {
     if (!navigator.geolocation) {
-        gpsStatus.textContent = "GPS не підтримується";
+        gpsStatus.textContent = "❌ Геолокація не підтримується";
+        updateGpsRetryButton(true);
         return;
     }
 
-    // Не створюємо кілька паралельних GPS watcher-ів.
-    if (watchId !== null && watchId !== undefined) return;
+    if (!window.isSecureContext && location.hostname !== "localhost") {
+        gpsStatus.textContent = "🔒 GPS потребує HTTPS";
+        updateGpsRetryButton(true);
+        return;
+    }
 
-    gpsStatus.textContent = "Пошук GPS...";
+    if (forceRestart && watchId !== null && watchId !== undefined) {
+        try { navigator.geolocation.clearWatch(watchId); } catch (_) {}
+        watchId = null;
+    } else if (watchId !== null && watchId !== undefined) {
+        return;
+    }
 
-    // Спочатку просимо швидку доступну позицію.
-    // Це особливо корисно на мобільному після відкриття GitHub Pages.
+    gpsStatus.textContent = "📡 Запит геолокації...";
+    updateGpsRetryButton(false);
+
+    // Permission API is informational only: geolocation itself remains authoritative.
+    try {
+        if (navigator.permissions?.query) {
+            navigator.permissions.query({name:"geolocation"}).then(result => {
+                if (result.state === "denied" && !currentPosition) {
+                    gpsStatus.textContent = "⛔ Дозвіл GPS заборонено";
+                    updateGpsRetryButton(true);
+                } else if (result.state === "prompt" && !currentPosition) {
+                    gpsStatus.textContent = "📍 Дозволь доступ до місцезнаходження";
+                } else if (result.state === "granted" && !currentPosition) {
+                    gpsStatus.textContent = "🛰️ Пошук координат...";
+                }
+            }).catch(() => {});
+        }
+    } catch (_) {}
+
+    // Quick first fix: cached/network location.
     navigator.geolocation.getCurrentPosition(
-        handlePosition,
-        function (error) {
-            // Помилка швидкого фіксу не зупиняє основний точний watcher.
-            if (!currentPosition && error && error.code === error.PERMISSION_DENIED) {
+        function(position) {
+            gpsStatus.textContent = "📍 Приблизна позиція отримана";
+            handlePosition(position);
+        },
+        function(error) {
+            if (error && error.code === error.PERMISSION_DENIED) {
                 handleGPSError(error);
+            } else if (!currentPosition) {
+                gpsStatus.textContent = "🛰️ Шукаю точний GPS...";
             }
         },
         {
             enableHighAccuracy: false,
-            maximumAge: 60000,
-            timeout: 8000
+            maximumAge: 120000,
+            timeout: 10000
         }
     );
 
-    // Далі постійно уточнюємо координати справжнім high-accuracy GPS.
+    // Continuous accurate GPS.
     watchId = navigator.geolocation.watchPosition(
         handlePosition,
         handleGPSError,
         {
             enableHighAccuracy: true,
-            maximumAge: 5000,
-            timeout: 30000
+            maximumAge: 10000,
+            timeout: 45000
         }
     );
 }
@@ -3370,12 +3420,8 @@ function handlePosition(
     updateHUD();
 
 
-    gpsStatus.textContent =
-        "GPS ±" +
-        Math.round(
-            accuracy
-        ) +
-        " м";
+    gpsStatus.textContent = "📍 GPS ±" + Math.round(accuracy) + " м";
+    updateGpsRetryButton(false);
 
 }
 
@@ -5458,31 +5504,31 @@ function getDistance(
 ========================================================= */
 
 function handleGPSError(error) {
-    // Якщо координати вже були отримані, одиничний timeout/temporary error
-    // не повинен переводити гру назад у стан "GPS не працює".
     if (currentPosition && error && error.code !== error.PERMISSION_DENIED) {
         const acc = Number(currentPosition.accuracy);
         gpsStatus.textContent = Number.isFinite(acc)
-            ? "GPS ±" + Math.round(acc) + " м"
-            : "GPS активний";
+            ? "📍 GPS ±" + Math.round(acc) + " м"
+            : "📍 GPS активний";
+        updateGpsRetryButton(false);
         return;
     }
 
-    let message = "Помилка GPS";
+    let message = "❌ Помилка GPS";
     if (error) {
         switch (error.code) {
             case error.PERMISSION_DENIED:
-                message = "Немає дозволу на геолокацію";
+                message = "⛔ Немає дозволу на геолокацію";
                 break;
             case error.POSITION_UNAVAILABLE:
-                message = "GPS-позиція недоступна";
+                message = "⚠️ Координати зараз недоступні";
                 break;
             case error.TIMEOUT:
-                message = "Пошук GPS триває...";
+                message = "⌛ GPS довго шукає позицію";
                 break;
         }
     }
     gpsStatus.textContent = message;
+    updateGpsRetryButton(true);
 }
 
 
@@ -6277,6 +6323,19 @@ setTimeout(() => {
     try { if (!currentPosition) ensureGpsSecureContextHint(); } catch (_) {}
 }, 500);
 
+
+
+function updateGpsRetryButton(show) {
+    const btn = document.getElementById("gpsRetryBtn");
+    if (btn) btn.classList.toggle("show", !!show);
+}
+
+function retryGPS() {
+    gpsStatus.textContent = "🔄 Перезапускаю GPS...";
+    updateGpsRetryButton(false);
+    startGPS(true);
+}
+
 </script>
 
 
@@ -6312,6 +6371,9 @@ setTimeout(() => {
         <button id="finishEmergencyUnload" type="button" onclick="closeEmergencyUnload()">🎒 Взяти рюкзак і йти пішки</button>
     </div>
 </div>
+
+
+<button id="gpsRetryBtn" type="button" onclick="retryGPS()" aria-label="Повторити GPS">🔄 Повторити GPS</button>
 
 </body>
 </html>
