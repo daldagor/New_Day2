@@ -3122,44 +3122,43 @@ const playerIcon =
 ========================================================= */
 
 function startGPS() {
-
     if (!navigator.geolocation) {
-
-        gpsStatus.textContent =
-            "GPS не підтримується";
-
+        gpsStatus.textContent = "GPS не підтримується";
         return;
-
     }
 
+    // Не створюємо кілька паралельних GPS watcher-ів.
+    if (watchId !== null && watchId !== undefined) return;
 
-    gpsStatus.textContent =
-        "Пошук GPS...";
+    gpsStatus.textContent = "Пошук GPS...";
 
-
-    watchId =
-        navigator.geolocation
-        .watchPosition(
-
-            handlePosition,
-
-            handleGPSError,
-
-            {
-
-                enableHighAccuracy:
-                    true,
-
-                maximumAge:
-                    1000,
-
-                timeout:
-                    15000
-
+    // Спочатку просимо швидку доступну позицію.
+    // Це особливо корисно на мобільному після відкриття GitHub Pages.
+    navigator.geolocation.getCurrentPosition(
+        handlePosition,
+        function (error) {
+            // Помилка швидкого фіксу не зупиняє основний точний watcher.
+            if (!currentPosition && error && error.code === error.PERMISSION_DENIED) {
+                handleGPSError(error);
             }
+        },
+        {
+            enableHighAccuracy: false,
+            maximumAge: 60000,
+            timeout: 8000
+        }
+    );
 
-        );
-
+    // Далі постійно уточнюємо координати справжнім high-accuracy GPS.
+    watchId = navigator.geolocation.watchPosition(
+        handlePosition,
+        handleGPSError,
+        {
+            enableHighAccuracy: true,
+            maximumAge: 5000,
+            timeout: 30000
+        }
+    );
 }
 
 
@@ -3190,6 +3189,12 @@ function handlePosition(
         accuracy: accuracy
 
     };
+
+    // OSM environmental interactions follow the real GPS position.
+    // Their own distance caches prevent unnecessary Overpass requests.
+    refreshNearbyTrees(latitude, longitude);
+    refreshNearbyWater(latitude, longitude);
+
 
     refreshOpenBuildingPopup();
 
@@ -5452,47 +5457,32 @@ function getDistance(
    GPS ERROR
 ========================================================= */
 
-function handleGPSError(
-    error
-) {
-
-    let message =
-        "Помилка GPS";
-
-
-    switch (
-        error.code
-    ) {
-
-        case error.PERMISSION_DENIED:
-
-            message =
-                "Немає дозволу на геолокацію";
-
-            break;
-
-
-        case error.POSITION_UNAVAILABLE:
-
-            message =
-                "GPS-позиція недоступна";
-
-            break;
-
-
-        case error.TIMEOUT:
-
-            message =
-                "GPS не відповідає";
-
-            break;
-
+function handleGPSError(error) {
+    // Якщо координати вже були отримані, одиничний timeout/temporary error
+    // не повинен переводити гру назад у стан "GPS не працює".
+    if (currentPosition && error && error.code !== error.PERMISSION_DENIED) {
+        const acc = Number(currentPosition.accuracy);
+        gpsStatus.textContent = Number.isFinite(acc)
+            ? "GPS ±" + Math.round(acc) + " м"
+            : "GPS активний";
+        return;
     }
 
-
-    gpsStatus.textContent =
-        message;
-
+    let message = "Помилка GPS";
+    if (error) {
+        switch (error.code) {
+            case error.PERMISSION_DENIED:
+                message = "Немає дозволу на геолокацію";
+                break;
+            case error.POSITION_UNAVAILABLE:
+                message = "GPS-позиція недоступна";
+                break;
+            case error.TIMEOUT:
+                message = "Пошук GPS триває...";
+                break;
+        }
+    }
+    gpsStatus.textContent = message;
 }
 
 
@@ -6272,6 +6262,20 @@ function validateStrandedCarOwnership() {
 setTimeout(() => {
     try { validateStrandedCarOwnership(); } catch (_) {}
 }, 0);
+
+
+
+function ensureGpsSecureContextHint() {
+    if (!window.isSecureContext && location.hostname !== "localhost") {
+        gpsStatus.textContent = "GPS потребує HTTPS";
+    }
+}
+
+
+
+setTimeout(() => {
+    try { if (!currentPosition) ensureGpsSecureContextHint(); } catch (_) {}
+}, 500);
 
 </script>
 
