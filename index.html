@@ -1155,6 +1155,14 @@
     display: flex !important;
 }
 
+
+/* Close control in the upper-right corner of every game dialog. */
+.profile-card,.inventory-card,.storage-shell,.building-loot-panel,.emergency-unload-content { position:relative; }
+.game-modal-x { position:absolute; top:10px; right:10px; z-index:30; display:flex; align-items:center; justify-content:center; width:36px; height:36px; padding:0; border:1px solid rgba(255,255,255,.3); border-radius:10px; background:#243445; color:#fff; font:700 28px/1 Arial,sans-serif; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.25); }
+.game-modal-x:active { background:#49647c; }
+.profile-header,.inventory-header,.storage-header,.building-loot-head { padding-right:45px; }
+.emergency-unload-content { padding-top:46px !important; }
+
 </style>
 </head>
 
@@ -1301,6 +1309,7 @@
     <!-- PROFILE MODAL -->
     <div id="profileModal" class="hidden">
         <div class="profile-card">
+        <button type="button" class="game-modal-x" aria-label="Закрити вікно" title="Закрити" onclick='document.getElementById("closeProfile").click()'>×</button>
             <div class="profile-header">
                 <h2>👤 Профіль</h2>
                 <button id="closeProfile">Закрити</button>
@@ -1331,6 +1340,7 @@
     <!-- INVENTORY MODAL -->
     <div id="inventoryModal" class="hidden">
         <div class="inventory-card">
+        <button type="button" class="game-modal-x" aria-label="Закрити вікно" title="Закрити" onclick='document.getElementById("closeInventory").click()'>×</button>
             <div class="inventory-header">
                 <h2>🎒 Рюкзак</h2>
             </div>
@@ -1352,6 +1362,7 @@
     <!-- BASE STORAGE MODAL -->
     <div id="baseStorageModal" class="hidden">
         <div class="storage-shell">
+        <button type="button" class="game-modal-x" aria-label="Закрити вікно" title="Закрити" onclick='document.getElementById("closeBaseStorage").click()'>×</button>
             <div class="storage-top">
                 <div class="storage-header">
                     <div>
@@ -2845,8 +2856,17 @@ function loadBuildingGeometryCache() {
 
 function saveBuildingGeometryCache() {
     try {
-        const records = Array.from(buildingMemoryCache.values())
-            .slice(-BUILDING_CACHE_MAX)
+        // Keep all important buildings (base, searched, stored items) in the
+        // persistent geometry cache before allocating space to new OSM data.
+        const all = Array.from(buildingMemoryCache.values());
+        const important = all.filter(item => {
+            const st = buildingStates[item.id] || {};
+            return st.isBase || st.lootGenerated || st.isDepleted ||
+                (Array.isArray(st.storedItems) && st.storedItems.length > 0);
+        });
+        const importantIds = new Set(important.map(item => item.id));
+        const others = all.filter(item => !importantIds.has(item.id));
+        const records = [...important, ...others.slice(-Math.max(0, BUILDING_CACHE_MAX - important.length))]
             .map(item => ({ id:item.id, ring:item.ring, tags:item.tags || {}, poi:item.poi || null }));
         localStorage.setItem(BUILDING_CACHE_STORAGE_KEY, JSON.stringify(records));
     } catch (error) {
@@ -3074,7 +3094,7 @@ function initMap() {
 
     /* Load real OSM building polygons for the visible map area. */
     map.on("moveend zoomend", scheduleBuildingLoad);
-    scheduleBuildingLoad();
+    setTimeout(scheduleBuildingLoad, 0);
 
     /*
         Fog must redraw whenever
@@ -3487,6 +3507,14 @@ function ensureBuildingRendered(id, ring, tags = {}) {
 function renderCachedBuildings() {
     if (!buildingLayer) return;
     const cached = Array.from(buildingMemoryCache.values());
+    // Restore the player's known buildings first; never wait for Overpass.
+    cached.sort((a, b) => {
+        const sa = buildingStates[a.id] || {};
+        const sb = buildingStates[b.id] || {};
+        const priority = st => st.isBase ? 3 :
+            (st.lootGenerated || st.isDepleted || (st.storedItems || []).length) ? 2 : 0;
+        return priority(sb) - priority(sa);
+    });
     cached.forEach(item => ensureBuildingRendered(item.id, item.ring, item.tags || {}));
 
     scheduleSpecialBuildingMarkerRefresh();
@@ -6424,6 +6452,7 @@ if (document.readyState === "loading") {
 
 <div id="buildingLootModal" aria-hidden="true">
     <div class="building-loot-panel">
+        <button type="button" class="game-modal-x" aria-label="Закрити вікно" title="Закрити" onclick='closeBuildingLootModal()'>×</button>
         <div class="building-loot-head">
             <div>
                 <h2>🔍 Результат обшуку</h2>
@@ -6440,6 +6469,7 @@ if (document.readyState === "loading") {
 
 <div id="emergencyUnloadModal" class="modal emergency-unload-modal">
     <div class="modal-content emergency-unload-content">
+        <button type="button" class="game-modal-x" aria-label="Закрити вікно" title="Закрити" onclick='closeEmergencyUnload()'>×</button>
         <h2>⛽ Пальне закінчилось</h2>
         <p id="strandedUnloadHint">Машина залишається тут. Обери, що взяти з собою в рюкзак, а що залишити в машині.</p>
         <div id="strandedLoadSummary"></div>
